@@ -19,13 +19,14 @@ Widget logic (video)</a>
   - [(1) Ingest historical and moving-forward data to Yandex object storage](#ingest-historical-and-moving-forward-data-to-yandex-object-storage)
   - [(2) Pandas loads data from Yandex Object Storage](#2-pandas-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
-  - [(4) Custom Data Visualization](#4-data-visualization-with-looker)
+  - [(4) Spark data analytics] (#4-spark-data-analytics)
+  - [(5) Custom Data Visualization](#4-custom data visualization)
 - [Reproducability](#reproducability)
   - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
   - [Step 2: Setup Workaround on VM](#step-2-setup-workaround-on-vm)
 - How to use the visualization?
 - [Further Improvements](#further-improvements)
--
+
 
 ## Project Description
 
@@ -133,6 +134,18 @@ The tables may contain duplicates.
 
 ### (3)  Data Warehouse Transformation with dbt
 
+Raw - это parquet файлы.
+Вторая стадия - это staging таблицы
+У нас есть staging c результатами игр, а также календарем
+для staging мы убираем дубликаты. На этом этапе мы формируем таблицы связки.
+Нужно проставить координаты стадионов. Нам нужен staging cущности и обновление продовых таблиц
+в euro_stat. Вьюха для обновления без дубликатов. Очистка истории за какой-то большой период.
+
+### (4) Spark data analytics.
+Spark нужен нам для дальнейшей работы, чтобы запустить машинной обучение и в дальнейшем
+сделать прогнозы. Сейчас мы смотрим простейшие метрики по количеству голов в срезе чемпионата и сезона.
+
+
 # How to use the visualization?
 The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
 
@@ -149,7 +162,6 @@ In addition to the local slices, there are events when clicking on the external 
 2. Clicking on "Schedule" displays a calendar of all game days.
 3. Clicking on "Cities and stadiums" shows marked cities on the map of the host country of the tournament.
 4. Clicking on "Groups and stages" displays the full tournament bracket.
-
 
 
 
