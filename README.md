@@ -46,52 +46,7 @@ The visualization was developed separately using the Flask framework and is avai
 - Flask + HTML + JS + Jinja for data visualisation
 
 
-## Data sources
-
-
-- https://www.fifa.com/   fetch matches of World Championships via API
-- https://www.uefa.com/   retrieve matches for the European football championship
-- https://sports.ru/  retrieve data of other championships, such as the Kyrgyzstan championship. We also update the results and match statistics in real-time using this resource.
-- http://clubelo.com/  is a source for predicting the outcome of games based on the Elo rating
-
-
-Manually and with the help of the GPT chat, we create links between identical entities in different data sources, such as stadiums, games, and players.
-
-# How to use the visualization?
-The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
-
-Clicking on each slice of the diagram highlights the associated data structure with the event. Specifically, clicking on:
-
-* Team highlights the days on which the matches will be played, the stadiums, and the groups. The center displays the schedule of all matches.
-* Match day highlights all teams playing on that day, the stadiums, and the groups. The center displays the schedule of all matches on that day.
-* Stadium
-* Stage
-
-In addition to the local slices, there are events when clicking on the external arches:
-
-1. Clicking on "National teams" shows a world map with the participating countries highlighted.
-2. Clicking on "Schedule" displays a calendar of all game days.
-3. Clicking on "Cities and stadiums" shows marked cities on the map of the host country of the tournament.
-4. Clicking on "Groups and stages" displays the full tournament bracket.
-
-
-"{source}/football/{tournament_id}/{year}/{stage_name}/{date}"
-
-
-# Datawarehouse (MYSQL  mysql:8.0.27)
-
-Main tables related to each other by foreign keys, with a star schema and a fact table matches:
-DDL tables are stored in  `03_datawarehouse_mysql/ddl`
-
-1. Competitions. The considered tournament.
-2. Teams. World Cup teams, team icons URL and country code (needed for rendering a world map).
-3. Matches (fact table). Played or scheduled matches, goals scored/missed, nominal home team/nominal away team.
-4. Stages. All rounds. Group stage/quarterfinals/semifinals/final or rounds for club championships.
-5. Places. The location where the match was played, stadium, stadium capacity, stadium name, and location on the world map.
-6. Players. Players of teams, their position on the field, age, height.
-7. Goals. Goals scored in the match, for which team, and at which minute.
-
-
+# Data Pipeline Architecture and Workflow
 ```mermaid
 flowchart LR
 
@@ -144,6 +99,55 @@ C -- Real-time --> H
 H -- Last Game Statistics  --> I
 E -- Raw Data --> J
 ```
+
+
+## Data sources
+
+
+- https://www.fifa.com/   fetch matches of World Championships via API
+- https://www.uefa.com/   retrieve matches for the European football championship
+- https://sports.ru/  retrieve data of other championships, such as the Kyrgyzstan championship. We also update the results and match statistics in real-time using this resource.
+- http://clubelo.com/  is a source for predicting the outcome of games based on the Elo rating
+
+
+Manually and with the help of the GPT chat, we create links between identical entities in different data sources, such as stadiums, games, and players.
+
+# How to use the visualization?
+The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
+
+Clicking on each slice of the diagram highlights the associated data structure with the event. Specifically, clicking on:
+
+* Team highlights the days on which the matches will be played, the stadiums, and the groups. The center displays the schedule of all matches.
+* Match day highlights all teams playing on that day, the stadiums, and the groups. The center displays the schedule of all matches on that day.
+* Stadium
+* Stage
+
+In addition to the local slices, there are events when clicking on the external arches:
+
+1. Clicking on "National teams" shows a world map with the participating countries highlighted.
+2. Clicking on "Schedule" displays a calendar of all game days.
+3. Clicking on "Cities and stadiums" shows marked cities on the map of the host country of the tournament.
+4. Clicking on "Groups and stages" displays the full tournament bracket.
+
+
+"{source}/football/{tournament_id}/{year}/{stage_name}/{date}"
+
+
+# Datawarehouse (MYSQL  mysql:8.0.27)
+
+Main tables related to each other by foreign keys, with a star schema and a fact table matches:
+DDL tables are stored in  `03_datawarehouse_mysql/ddl`
+
+1. Competitions. The considered tournament.
+2. Teams. World Cup teams, team icons URL and country code (needed for rendering a world map).
+3. Matches (fact table). Played or scheduled matches, goals scored/missed, nominal home team/nominal away team.
+4. Stages. All rounds. Group stage/quarterfinals/semifinals/final or rounds for club championships.
+5. Places. The location where the match was played, stadium, stadium capacity, stadium name, and location on the world map.
+6. Players. Players of teams, their position on the field, age, height.
+7. Goals. Goals scored in the match, for which team, and at which minute.
+
+
+
 
 ```mermaid
 erDiagram
