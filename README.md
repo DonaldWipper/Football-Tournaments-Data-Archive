@@ -104,19 +104,9 @@ H -- Last Game Statistics  --> I
 E -- Raw Data --> J
 ```
 
-The workflow is as follows:
+# Ingest historical and moving-forward data to Yandex object storage
 
 
-## Data sources
-
-
-- https://www.fifa.com/   fetch matches of World Championships via API
-- https://www.uefa.com/   retrieve matches for the European football championship
-- https://sports.ru/  retrieve data of other championships, such as the Kyrgyzstan championship. We also update the results and match statistics in real-time using this resource.
-- http://clubelo.com/  is a source for predicting the outcome of games based on the Elo rating
-- http://eloratings.net/ elorating for national teams
-
-Manually and with the help of the GPT chat, we create links between identical entities in different data sources, such as stadiums, games, and players.
 
 # How to use the visualization?
 The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
