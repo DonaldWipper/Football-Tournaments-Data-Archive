@@ -109,7 +109,7 @@ Y -- 1. ingest raw data with python--> E
 E -- 2. Daily --> F
 F -- 3. Daily --> G
 G -- 3. Transformed Data --> L
-C -- Real-time --> H
+C -- 6. Real-time --> H
 H -- Last Game Statistics  --> I
 E -- 4. Raw Data --> J
 ```
