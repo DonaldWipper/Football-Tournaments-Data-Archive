@@ -17,7 +17,7 @@ Widget logic (video)</a>
 - [Data Pipeline Architecture and Workflow](#data-pipeline-architecture-and-workflow)
   - [(0) Data sources](#0-data-sources)
   - [(1) Ingest historical and moving-forward data to Yandex object storage](#ingest-historical-and-moving-forward-data-to-yandex-object-storage)
-  - [(2) BigQuery loads data from Cloud Storage](#2-bigquery-loads-data-from-cloud-storage)
+  - [(2) Pandas loads data from Yandex Object Storage](#2-pandas-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
   - [(4) Custom Data Visualization](#4-data-visualization-with-looker)
 - [Reproducability](#reproducability)
@@ -131,6 +131,7 @@ For the game statistics it is partitioned by Tournament, Year, Stage Name and Da
 Raw data is loaded into the corresponding staging tables in the databases fifa_staging, uefa_staging, sports_ru_staging, elorating_staging, clubelo_staging. 
 The tables may contain duplicates.
 
+### (3)  Data Warehouse Transformation with dbt
 
 # How to use the visualization?
 The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
