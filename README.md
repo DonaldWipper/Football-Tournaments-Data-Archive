@@ -59,7 +59,8 @@ subgraph "Data Sources"
 A(FIFA)
 B(UEFA)
 C(SPORTS.RU)
-S(openfootball/stadiums)
+S(clubelo.com)
+Y(eloratings.net)
 end
 
 
@@ -92,6 +93,7 @@ A -- ingest raw data with python  --> E
 B -- ingest raw data with python--> E
 C -- ingest raw data with python--> E
 S -- ingest raw data with python--> E
+Y -- ingest raw data with python--> E
 E -- Daily --> F
 F -- Daily --> G
 G -- Transformed Data --> L
@@ -108,7 +110,7 @@ E -- Raw Data --> J
 - https://www.uefa.com/   retrieve matches for the European football championship
 - https://sports.ru/  retrieve data of other championships, such as the Kyrgyzstan championship. We also update the results and match statistics in real-time using this resource.
 - http://clubelo.com/  is a source for predicting the outcome of games based on the Elo rating
-
+- http://eloratings.net/ elorating for national teams
 
 Manually and with the help of the GPT chat, we create links between identical entities in different data sources, such as stadiums, games, and players.
 
