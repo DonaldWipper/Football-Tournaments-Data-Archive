@@ -19,7 +19,7 @@ Widget logic (video)</a>
   - [(1) Ingest historical and moving-forward data to Yandex object storage](#ingest-historical-and-moving-forward-data-to-yandex-object-storage)
   - [(2) Pandas loads data from Yandex Object Storage](#2-pandas-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
-  - [(4) Spark data analytics] (#4-spark-data-analytics)
+  - [(4) Spark data analytics](#4-spark-data-analytics)
   - [(5) Custom Data Visualization](#4-custom data visualization)
 - [Reproducability](#reproducability)
   - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
