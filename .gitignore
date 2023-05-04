@@ -1,2 +1,3 @@
 !/06_kafka_streaming/kafka_producer/url.py
 !/06_kafka_streaming/kafka_consumer/url.py
+!/.env
