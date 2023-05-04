@@ -53,6 +53,8 @@ flowchart LR
 style A fill:#6ebcff,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
 style B fill:#ffa07a,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
 style C fill:#ffc93c,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
+style S fill:#060c0a,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
+style Y fill:#060c0a,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
 
 subgraph "Prefect"
 subgraph "Data Sources"
