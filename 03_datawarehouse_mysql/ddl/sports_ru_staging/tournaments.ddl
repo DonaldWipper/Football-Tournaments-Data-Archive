@@ -7,5 +7,6 @@ CREATE TABLE sports_ru_staging.tournaments
     countries text,
     priority  text,
     flag      text,
-    big_logo  text
+    big_logo  text,
+    dt_updated datetime DEFAULT CURRENT_TIMESTAMP
 );

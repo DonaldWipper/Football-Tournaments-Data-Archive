@@ -134,35 +134,9 @@ The tables may contain duplicates.
 
 ### (3)  Data Warehouse Transformation with dbt
 
-Raw - это parquet файлы.
-Вторая стадия - это staging таблицы
-У нас есть staging c результатами игр, а также календарем
-для staging мы убираем дубликаты. На этом этапе мы формируем таблицы связки.
-Нужно проставить координаты стадионов. Нам нужен staging cущности и обновление продовых таблиц
-в euro_stat. Вьюха для обновления без дубликатов. Очистка истории за какой-то большой период.
-
-### (4) Spark data analytics.
-Spark нужен нам для дальнейшей работы, чтобы запустить машинной обучение и в дальнейшем
-сделать прогнозы. Сейчас мы смотрим простейшие метрики по количеству голов в срезе чемпионата и сезона.
-
-
-# How to use the visualization?
-The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
-
-Clicking on each slice of the diagram highlights the associated data structure with the event. Specifically, clicking on:
-
-* Team highlights the days on which the matches will be played, the stadiums, and the groups. The center displays the schedule of all matches.
-* Match day highlights all teams playing on that day, the stadiums, and the groups. The center displays the schedule of all matches on that day.
-* Stadium
-* Stage
-
-In addition to the local slices, there are events when clicking on the external arches:
-
-1. Clicking on "National teams" shows a world map with the participating countries highlighted.
-2. Clicking on "Schedule" displays a calendar of all game days.
-3. Clicking on "Cities and stadiums" shows marked cities on the map of the host country of the tournament.
-4. Clicking on "Groups and stages" displays the full tournament bracket.
-
+The second layer of the data pipeline consists of staging tables.
+We have staging tables for game results, schedules, stadiums, and statistics. For staging tables, we remove duplicates using additional views. Staging tables are cleared for a period of more than N days.
+We use these staging tables to update the production tables in the euro_stat database. We update game results, add new players, teams e.t.c.
 
 
 
@@ -277,6 +251,32 @@ erDiagram
     goals }|..|| teams : scored_for
 
 ```
+
+### (4) Spark data analytics.
+Spark нужен нам для дальнейшей работы, чтобы запустить машинной обучение и в дальнейшем
+сделать прогнозы. Сейчас мы смотрим простейшие метрики по количеству голов в срезе чемпионата и сезона.
+
+
+# How to use the visualization?
+The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
+
+Clicking on each slice of the diagram highlights the associated data structure with the event. Specifically, clicking on:
+
+* Team highlights the days on which the matches will be played, the stadiums, and the groups. The center displays the schedule of all matches.
+* Match day highlights all teams playing on that day, the stadiums, and the groups. The center displays the schedule of all matches on that day.
+* Stadium
+* Stage
+
+In addition to the local slices, there are events when clicking on the external arches:
+
+1. Clicking on "National teams" shows a world map with the participating countries highlighted.
+2. Clicking on "Schedule" displays a calendar of all game days.
+3. Clicking on "Cities and stadiums" shows marked cities on the map of the host country of the tournament.
+4. Clicking on "Groups and stages" displays the full tournament bracket.
+
+
+
+
 
 ## Further Improvements
 There are many things can be improved from this project:
