@@ -20,7 +20,7 @@ Widget logic (video)</a>
   - [(2) Pandas loads data from Yandex Object Storage](#2-pandas-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
   - [(4) Spark data analytics](#4-spark-data-analytics)
-  - [(5) Kafka real-time streaming](#6-kafka-real-time-streaming)
+  - [(5) Kafka real-time streaming](#5-kafka-real-time-streaming)
   - [(6) Custom Data Visualization](#6-custom data visualization)
   
 - [Reproducability](#reproducability)
