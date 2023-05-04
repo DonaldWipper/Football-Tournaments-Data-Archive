@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:8.0.27
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - MYSQL_DATABASE=uero_stat
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_USER=${DB_USERNAME}
+    ports:
+      - '3306:3306'

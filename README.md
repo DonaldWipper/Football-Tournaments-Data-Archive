@@ -43,7 +43,11 @@ The visualization was developed separately using the Flask framework and is avai
 - dbt core as the transformation tool to implement data modeling.
 - Self-hosted Prefect core to manage and monitor our workflow.
 - Terraform to easily manage the infrastructure setup and changes.
+- Hertzner VPS as the virtual host to host our data pipeline.
 - Flask + HTML + JS + Jinja for data visualisation
+
+with some improvements to support easy reproducability, such as:
+  - Containerized environment with docker
 
 
 # Data Pipeline Architecture and Workflow
@@ -96,7 +100,7 @@ B -- 1. ingest raw data with python--> E
 C -- 1. ingest raw data with python--> E
 S -- 1. ingest raw data with python--> E
 Y -- 1. ingest raw data with python--> E
-E -- Daily --> F
+E -- 2. Daily --> F
 F -- Daily --> G
 G -- Transformed Data --> L
 C -- Real-time --> H
@@ -104,7 +108,7 @@ H -- Last Game Statistics  --> I
 E -- Raw Data --> J
 ```
 
-# Ingest historical and moving-forward data to Yandex object storage
+### (1)Ingest historical and moving-forward data to Yandex object storage
 
 The system ingests data from 5 different sources. Historical data covers the data that are created before the ingestion date. Moving-forward data is data that are updated daily.
 
@@ -117,6 +121,13 @@ For the game statistics it is partitioned by Tournament, Year, Stage Name and Da
 ```{source}/football/{tournament_id}/{year}/{stage_name}/{date}```
 
 ![yandex object storage](/images/ya_object_storage.png)
+
+
+### (2) Pandas loads data from Yandex Object Storage
+
+Raw data is loaded into the corresponding staging tables in the databases fifa_staging, uefa_staging, sports_ru_staging, elorating_staging, clubelo_staging. 
+The tables may contain duplicates.
+
 
 # How to use the visualization?
 The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
