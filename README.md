@@ -16,7 +16,7 @@ Widget logic (video)</a>
 - [Technologies](#technologies)
 - [Data Pipeline Architecture and Workflow](#data-pipeline-architecture-and-workflow)
   - [(1) Data sources](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
-  - [(1) Ingest historical and (5) moving-forward data to Yandex object storage](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
+  - [(1) Ingest historical and moving-forward data to Yandex object storage](#ingest-historical-and-moving-forward-data-to-yandex-object-storage)
   - [(2) BigQuery loads data from Cloud Storage](#2-bigquery-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
   - [(4) Data Visualization with Looker](#4-data-visualization-with-looker)
@@ -91,11 +91,11 @@ subgraph "Data Analytics"
 J(Spark)
 end
 
-A -- ingest raw data with python  --> E
-B -- ingest raw data with python--> E
-C -- ingest raw data with python--> E
-S -- ingest raw data with python--> E
-Y -- ingest raw data with python--> E
+A -- 1. ingest raw data with python--> E 
+B -- 1. ingest raw data with python--> E
+C -- 1. ingest raw data with python--> E
+S -- 1. ingest raw data with python--> E
+Y -- 1. ingest raw data with python--> E
 E -- Daily --> F
 F -- Daily --> G
 G -- Transformed Data --> L
@@ -103,6 +103,8 @@ C -- Real-time --> H
 H -- Last Game Statistics  --> I
 E -- Raw Data --> J
 ```
+
+The workflow is as follows:
 
 
 ## Data sources
