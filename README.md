@@ -68,7 +68,7 @@ end
 
 
     subgraph "Data Lake"
-        E(Object Storage)
+        E(Yandex Object Storage)
         
     end
 
