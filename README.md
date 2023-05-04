@@ -275,7 +275,7 @@ In addition to the local slices, there are events when clicking on the external 
 3. Clicking on "Cities and stadiums" shows marked cities on the map of the host country of the tournament.
 4. Clicking on "Groups and stages" displays the full tournament bracket.
 
-
+<img src="images/app2.png" alt="App Web Preview" width="500">
 
 
 
