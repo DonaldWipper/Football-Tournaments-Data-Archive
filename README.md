@@ -15,14 +15,14 @@ Widget logic (video)</a>
 - [Project Description](#project-description)
 - [Technologies](#technologies)
 - [Data Pipeline Architecture and Workflow](#data-pipeline-architecture-and-workflow)
-    - [(1) Data sources](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
-    - [(1) Ingest historical and (5) moving-forward data to Yandex object storage](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
-    - [(2) BigQuery loads data from Cloud Storage](#2-bigquery-loads-data-from-cloud-storage)
-    - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
-    - [(4) Data Visualization with Looker](#4-data-visualization-with-looker)
+  - [(1) Data sources](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
+  - [(1) Ingest historical and (5) moving-forward data to Yandex object storage](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
+  - [(2) BigQuery loads data from Cloud Storage](#2-bigquery-loads-data-from-cloud-storage)
+  - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
+  - [(4) Data Visualization with Looker](#4-data-visualization-with-looker)
 - [Reproducability](#reproducability)
-    - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
-    - [Step 2: Setup Workaround on VM](#step-2-setup-workaround-on-vm)
+  - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
+  - [Step 2: Setup Workaround on VM](#step-2-setup-workaround-on-vm)
 - How to use the visualization?
 - [Further Improvements](#further-improvements)
 -
@@ -75,10 +75,10 @@ In addition to the local slices, there are events when clicking on the external 
 4. Clicking on "Groups and stages" displays the full tournament bracket.
 
 
+"{source}/football/{tournament_id}/{year}/{stage_name}/{date}"
 
 
-
-## Datawarehouse (MYSQL  mysql:8.0.27)
+# Datawarehouse (MYSQL  mysql:8.0.27)
 
 Main tables related to each other by foreign keys, with a star schema and a fact table matches:
 DDL tables are stored in  `03_datawarehouse_mysql/ddl`
@@ -147,94 +147,98 @@ E -- Raw Data --> J
 
 ```mermaid
 erDiagram
-    GAMES ||--o{ PLACES : where_was_played
-    GAMES ||--o{ TOURNAMENTS : which_tournament
-    GAMES ||--o{ STAGES : which_stage_of_tournament
-    GAMES ||--o{ TEAMS : which_teams
-    PLAYERS ||--o{ TEAMS : which_teams
-    GOALS ||--o{ TEAMS : which_teams
-    PLACES ||--o{ TOURNAMENTS : which_tournament
-    STAGES ||--o{ TOURNAMENTS : which_tournament
-    GOALS ||--o{ TOURNAMENTS : which_tournament
-    PLAYERS ||--o{ TOURNAMENTS : which_tournament
-    
-    GAMES {
-        int id PK
-        bigint competition_id FK 
-        int goals_home_team
-        bigint place_id FK 
-        int away_team_id FK 
-        int goals_away_team
-        text status
-        bigint home_team_id FK 
-        text date
-        bigint id_stage FK 
-        int extra_time_home_goals
-        int extra_time_away_goals
-        int penalty_shootout_home_goals
-        int penalty_shootout_away_goals
-        bigint match_id_uefa FK 
-    }
-    
-    PLACES {
-        bigint  id  PK
-        text  stadium
-        text  city
-        text  short_name
-        int  capacity
-        bigint  competition_id FK 
-        double  lat
-        double  lng
+    teams {
+        id bigint PK
+        short_name text
+        short_name2 text
+        name text
     }
 
-    PLAYERS {
-        bigint  id PK
-        int  number
-        text  href
-        text  image
-        text  name
-        text  position
-        bigint  team_id FK 
-        bigint  tournament_id FK 
-        text  birthdate
+    stages {
+        id int PK
+        title text
     }
-    
-    STAGES {
-        int  id PK
-        bigint  competition_id FK 
-        text  title
-        bigint  pos
+
+    players {
+        id int PK
+        number int
+        image text
+        first_name text
+        last_name text
+        position text
+        team_id int FK
+        birthdate date
     }
-    
-    TEAMS {
-        bigint  id PK
-        text   short_name
-        text   short_name2
-        text   name
+
+    places {
+        id bigint PK
+        stadium text
+        city text
+        short_name text
+        capacity int
+        competition_id bigint FK
+        lat double
+        lng double
     }
-    
-    TOURNAMENTS {
-        bigint   id PK
-        bigint   number_of_games
-        bigint   number_of_match_days
-        bigint   number_of_teams
-        text   last_updated
-        text   caption
-        int    year
-        text   league
-        text   url
+
+    match_status {
+        id int PK
+        status text
     }
-    
-    GOALS {
-            text    guid PK
-            bigint  game_id  FK 
-            text    minute
-            text    player_name
-            text    match_link
-            bigint  team_id  FK 
-            bigint  player_id  FK 
-            bigint  competition_id  FK 
+
+    matches {
+        id int PK
+        competition_id bigint FK
+        place_id bigint FK
+        stage_id int FK
+        status_id int FK
+        date text
+        local_date text
+        home_team_id bigint FK
+        away_team_id bigint FK
+        goals_home_team int
+        goals_away_team int
+        total_home_goals int
+        total_away_goals int
+        penalty_shootout_home_goals int
+        penalty_shootout_away_goals int
+        game_order int
     }
+
+    goals {
+        id bigint PK
+        match_id bigint FK
+        player_id bigint FK
+        team_id bigint FK
+        minute int
+        second int
+        text text
+    }
+
+    competitions {
+        id bigint PK
+        number_of_games bigint
+        number_of_match_days bigint
+        number_of_teams bigint
+        last_updated text
+        caption text
+        year int
+        league text
+        url text
+    }
+
+    teams }|..|| players : have
+    matches ||--|| places: played_at
+    matches ||--|| competitions : belongs_to
+    matches ||--|| teams : home
+    matches ||--|| teams : away
+    matches ||--|| places : played_at
+    matches ||--|| stages : belongs_to
+    matches ||--|| match_status : has_status
+    goals }|..|| matches : scored_in
+    goals }|..|| players : scored_by
+    goals }|..|| teams : scored_for
+
 ```
 
 ## Further Improvements

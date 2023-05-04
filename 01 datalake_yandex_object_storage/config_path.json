@@ -1,0 +1,20 @@
+{
+  "s3_bucket_name": "euro-stat",
+  "fifa_s3_path": "fifa/",
+  "uefa_s3_path": "uefa/",
+  "sports_ru_s3_path": "sports.ru/",
+  "full_path_matches": "{source}/football/{tournament_id}/{year}/{stage_name}/{date}",
+  "entities": {
+    "sports_ru": [
+      "tournaments_calendar",
+      "tournament_stat_seasons",
+      "tournaments"
+    ],
+    "fifa": [
+      ""
+    ],
+    "uefa": [
+      ""
+    ]
+  }
+}
