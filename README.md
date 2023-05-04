@@ -4,7 +4,7 @@
 # Football Tournaments Data Archive
 
 <a href="http://euro-stat.com/" target="_blank">LINK TO THE PROJECT</a>
-<img src="png/app.png" alt="App Preview" width="500">
+<img src="images/app.png" alt="App Preview" width="500">
 
 <a href="https://www.youtube.com/watch?v=ld8AY3CgSn4" target="_blank">
 Widget logic (video)</a>
@@ -112,8 +112,11 @@ Prefect is used to run both types of data and to schedule daily ingestion for mo
 
 Yandex Object Storage is our datalake. The data is stored in the datalake as Parquet files, 
 
-For the game statistics it partitioned by Year, Month and Day.
+For the game statistics it is partitioned by Tournament, Year, Stage Name and Date.
 
+```{source}/football/{tournament_id}/{year}/{stage_name}/{date}```
+
+![yandex object storage](/images/ya_object_storage.png)
 
 # How to use the visualization?
 The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
@@ -133,7 +136,7 @@ In addition to the local slices, there are events when clicking on the external 
 4. Clicking on "Groups and stages" displays the full tournament bracket.
 
 
-"{source}/football/{tournament_id}/{year}/{stage_name}/{date}"
+
 
 
 # Datawarehouse (MYSQL  mysql:8.0.27)
