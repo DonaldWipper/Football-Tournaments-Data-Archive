@@ -110,7 +110,7 @@ The system ingests data from 5 different sources. Historical data covers the dat
 
 Prefect is used to run both types of data and to schedule daily ingestion for moving-forward data.
 
-Google Cloud Storage is our datalake. The data is stored in the datalase as Parquet files, partitioned by Year, Month and Day.
+Yandex Object Storage is our datalake. The data is stored in the datalase as Parquet files, partitioned by Year, Month and Day.
 
 
 # How to use the visualization?
