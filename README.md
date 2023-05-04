@@ -19,7 +19,7 @@ Widget logic (video)</a>
   - [(1) Ingest historical and moving-forward data to Yandex object storage](#ingest-historical-and-moving-forward-data-to-yandex-object-storage)
   - [(2) BigQuery loads data from Cloud Storage](#2-bigquery-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
-  - [(4) Data Visualization with Looker](#4-data-visualization-with-looker)
+  - [(4) Custom Data Visualization](#4-data-visualization-with-looker)
 - [Reproducability](#reproducability)
   - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
   - [Step 2: Setup Workaround on VM](#step-2-setup-workaround-on-vm)
@@ -110,7 +110,9 @@ The system ingests data from 5 different sources. Historical data covers the dat
 
 Prefect is used to run both types of data and to schedule daily ingestion for moving-forward data.
 
-Yandex Object Storage is our datalake. The data is stored in the datalase as Parquet files, partitioned by Year, Month and Day.
+Yandex Object Storage is our datalake. The data is stored in the datalake as Parquet files, 
+
+For the game statistics it partitioned by Year, Month and Day.
 
 
 # How to use the visualization?
