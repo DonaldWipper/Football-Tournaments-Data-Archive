@@ -106,6 +106,11 @@ E -- Raw Data --> J
 
 # Ingest historical and moving-forward data to Yandex object storage
 
+The system ingests data from 5 different sources. Historical data covers the data that are created before the ingestion date. Moving-forward data is data that are updated daily.
+
+Prefect is used to run both types of data and to schedule daily ingestion for moving-forward data.
+
+Google Cloud Storage is our datalake. The data is stored in the datalase as Parquet files, partitioned by Year, Month and Day.
 
 
 # How to use the visualization?
