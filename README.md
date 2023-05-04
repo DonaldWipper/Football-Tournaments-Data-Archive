@@ -109,7 +109,7 @@ F -- 3. Daily --> G
 G -- 3. Transformed Data --> L
 C -- Real-time --> H
 H -- Last Game Statistics  --> I
-E -- Raw Data --> J
+E -- 4. Raw Data --> J
 ```
 
 ### (1) Ingest historical and moving-forward data to Yandex object storage
