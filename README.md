@@ -21,6 +21,7 @@ Widget logic (video)</a>
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
   - [(4) Spark data analytics](#4-spark-data-analytics)
   - [(5) Custom Data Visualization](#4-custom data visualization)
+  
 - [Reproducability](#reproducability)
   - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
   - [Step 2: Setup Workaround on VM](#step-2-setup-workaround-on-vm)
@@ -257,7 +258,7 @@ erDiagram
 We need Spark for further work to run machine learning models and make predictions. Currently, we are examining simple metrics for the number of goals by championship and season.
 
 
-# How to use the visualization?
+### (5) Custom Data Visualization.
 The program interface consists of an elliptical diagram with sets of slices, with each slice representing a different data group such as teams, match schedules, stadiums and cities, groups, and stages of the tournament.
 
 Clicking on each slice of the diagram highlights the associated data structure with the event. Specifically, clicking on:
