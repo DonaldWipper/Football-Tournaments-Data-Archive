@@ -15,7 +15,7 @@ Widget logic (video)</a>
 - [Project Description](#project-description)
 - [Technologies](#technologies)
 - [Data Pipeline Architecture and Workflow](#data-pipeline-architecture-and-workflow)
-  - [(1) Data sources](#1-ingest-historical-and-5-moving-forward-data-to-yandex-object-storage)
+  - [(0) Data sources](#0-data-sources)
   - [(1) Ingest historical and moving-forward data to Yandex object storage](#ingest-historical-and-moving-forward-data-to-yandex-object-storage)
   - [(2) BigQuery loads data from Cloud Storage](#2-bigquery-loads-data-from-cloud-storage)
   - [(3) Data Warehouse Transformation with dbt and (6) prefect to schedule incremental transformation](#3-data-warehouse-transformation-with-dbt-and-6-prefect-to-schedule-incremental-transformation)
