@@ -61,12 +61,15 @@ style S fill:#bfc93c,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
 style Y fill:#bfc93c,stroke:#333,stroke-width:2px,stroke-dasharray: 5, 5;
 
 subgraph "Prefect"
+Z(Docker)
+X(Terraform)
 subgraph "Data Sources"
 A(FIFA)
 B(UEFA)
 C(SPORTS.RU)
 S(clubelo.com)
 Y(eloratings.net)
+
 end
 
 
@@ -101,14 +104,14 @@ C -- 1. ingest raw data with python--> E
 S -- 1. ingest raw data with python--> E
 Y -- 1. ingest raw data with python--> E
 E -- 2. Daily --> F
-F -- Daily --> G
-G -- Transformed Data --> L
+F -- 3. Daily --> G
+G -- 3. Transformed Data --> L
 C -- Real-time --> H
 H -- Last Game Statistics  --> I
 E -- Raw Data --> J
 ```
 
-### (1)Ingest historical and moving-forward data to Yandex object storage
+### (1) Ingest historical and moving-forward data to Yandex object storage
 
 The system ingests data from 5 different sources. Historical data covers the data that are created before the ingestion date. Moving-forward data is data that are updated daily.
 

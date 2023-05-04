@@ -1,0 +1,9 @@
+ prefect-sqlalchemy
+ prefect-dbt
+ dbt-core
+ dbt-mysql
+ python-dotenv
+ pandas
+ pyarrow
+ psycopg2-binary
+ sqlalchemy
