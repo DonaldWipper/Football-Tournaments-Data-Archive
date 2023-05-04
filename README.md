@@ -140,7 +140,7 @@ We use these staging tables to update the production tables in the euro_stat dat
 
 
 
-#### Datawarehouse (MYSQL  mysql:8.0.27)
+#### (3.1) Datawarehouse (MYSQL  mysql:8.0.27)
 
 Main tables related to each other by foreign keys, with a star schema and a fact table matches:
 DDL tables are stored in  `03_datawarehouse_mysql/ddl`
@@ -253,8 +253,8 @@ erDiagram
 ```
 
 ### (4) Spark data analytics.
-Spark нужен нам для дальнейшей работы, чтобы запустить машинной обучение и в дальнейшем
-сделать прогнозы. Сейчас мы смотрим простейшие метрики по количеству голов в срезе чемпионата и сезона.
+
+We need Spark for further work to run machine learning models and make predictions. Currently, we are examining simple metrics for the number of goals by championship and season.
 
 
 # How to use the visualization?
