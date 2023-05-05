@@ -86,7 +86,7 @@ services:
       - prefect
 
   pyspark:
-    image: jupyter/pyspark-notebook:latest
+    image: pyspark-aws:10
     environment:
       JUPYTER_ENABLE_LAB: "yes"
     ports:

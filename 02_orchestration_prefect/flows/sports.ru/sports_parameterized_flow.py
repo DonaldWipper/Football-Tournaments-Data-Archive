@@ -1,7 +1,7 @@
 from pathlib import Path
 from prefect import task
 from prefect.filesystems import S3
-
+from prefect_aws import AwsCredentials, S3Bucket
 
 # s3_bucket = S3Bucket.load("my-bucket")
 # s3_bucket.download_folder_to_path("my_folder", "my_folder")

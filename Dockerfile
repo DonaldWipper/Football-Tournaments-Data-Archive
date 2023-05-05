@@ -1,4 +1,4 @@
-FROM prefecthq/prefect:2.10.7-python3.9
+FROM prefecthq/prefect:2-python3.9-kubernetes
 
 
 COPY docker-requirements.txt .
