@@ -1,5 +1,6 @@
  prefect-sqlalchemy
  prefect-dbt
+ prefect-aws
  dbt-core
  dbt-mysql
  python-dotenv
@@ -7,3 +8,4 @@
  pyarrow
  psycopg2-binary
  sqlalchemy
+

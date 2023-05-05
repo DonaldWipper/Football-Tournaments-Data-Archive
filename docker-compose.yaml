@@ -85,3 +85,9 @@ services:
     networks:
       - prefect
 
+  pyspark:
+    image: jupyter/pyspark-notebook:latest
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+    ports:
+      - "9999:8888"
