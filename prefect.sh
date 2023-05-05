@@ -2,8 +2,8 @@
 set -e
 set +x
 
-VOLUMES_FOLDER=./volumes
-INITIALIZED_MARKER=./volumes/.initialized
+VOLUMES_FOLDER=${PWD}/${PREFECT_DIR}/volumes
+INITIALIZED_MARKER=${PWD}/${PREFECT_DIR}/volumes/.initialized
 DC_ENV_FILE=.env
 LOCAL_ENV_FILE=./versions.env
 
@@ -51,7 +51,7 @@ function initialize() {
     start_server
     sleep 1
     set +e
-    docker-compose exec prefect-server bash -c 'cd /flows && python ./init_orion.py'
+    docker-compose exec prefect-server bash -c 'cd ${PWD}/${PREFECT_DIR}/flows && python ./init_orion.py'
     if [ $? -ne 0 ]; then
         echo "ERROR: prefect server failed to initialize"
         exit 1
@@ -75,7 +75,7 @@ function start() {
         start_server
         sleep 5
     fi
-    docker-compose up -d --force-recreate --no-deps minio prefect-agent
+    docker-compose up -d --force-recreate --no-deps prefect-agent
     status
 }
 

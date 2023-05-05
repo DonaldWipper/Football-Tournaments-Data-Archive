@@ -31,9 +31,9 @@ services:
     restart: on-failure
 
     volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
-      - ${PWD}/volumes/prefect:/root/.prefect
-      - ${PWD}/flows:/opt/prefect/flows
+      - ${PWD}/${PREFECT_DIR}/volumes/postgres:/var/lib/postgresql/data
+      - ${PWD}/${PREFECT_DIR}/volumes/prefect:/root/.prefect
+      - ${PWD}/${PREFECT_DIR}/flows:/opt/prefect/flows
     networks:
       - prefect
   # --------------------------------------#
