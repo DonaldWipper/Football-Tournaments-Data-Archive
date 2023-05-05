@@ -24,8 +24,7 @@ Widget logic (video)</a>
   - [(6) Custom Data Visualization](#6-custom data visualization)
   
 - [Reproducability](#reproducability)
-  - [Step 1: Build GCP Resources from Local Computer](#step-1-build-gcp-resources-from-local-computer)
-  - [Step 2: Setup Workaround on VM](#step-2-setup-workaround-on-vm)
+
 - How to use the visualization?
 - [Further Improvements](#further-improvements)
 
