@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import numpy as np
 import datetime
+from prefect import task
 from pathlib import Path
 
 
@@ -65,16 +66,16 @@ def get_mysql_fields_config():
     return mysql_types_json
 
 
-# @task(log_prints=True)
-def transform(paths: list[Path]) -> pd.DataFrame:
+@task(log_prints=True)
+def transform(df: pd.DataFrame) -> pd.DataFrame:
     """Data cleaning example"""
     # [extract_add_info_from_path(str(f)) for f in paths]
 
-    df = pd.concat((pd.read_parquet(f, engine='pyarrow').assign(path=str(f)) for f in paths))
-
-    df['path_info'] = df['path'].apply(extract_add_info_from_path)
-    df[['year', 'date', 'stage_name', 'tournament_id']] = pd.DataFrame(df['path_info'].tolist(), index=df.index)
-    df.drop(columns=['path', 'path_info'], inplace=True)
+    # df = pd.concat((pd.read_parquet(f, engine='pyarrow').assign(path=str(f)) for f in paths))
+    #
+    # df['path_info'] = df['path'].apply(extract_add_info_from_path)
+    # df[['year', 'date', 'stage_name', 'tournament_id']] = pd.DataFrame(df['path_info'].tolist(), index=df.index)
+    # df.drop(columns=['path', 'path_info'], inplace=True)
 
     conf = get_mysql_fields_config()
 

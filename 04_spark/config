@@ -1,0 +1,3 @@
+[default]
+region = ru-central1
+output = parquet

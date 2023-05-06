@@ -1,5 +1,5 @@
 IMAGE_NAME := prefect-orion
-IMAGE_TAG := 2.10.7
+IMAGE_TAG := 2.8.7
 IMAGE := ${IMAGE_NAME}:${IMAGE_TAG}
 
 

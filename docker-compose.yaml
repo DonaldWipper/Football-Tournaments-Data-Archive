@@ -89,5 +89,10 @@ services:
     image: pyspark-aws:10
     environment:
       JUPYTER_ENABLE_LAB: "yes"
+    volumes:
+      - "${PWD}/${SPARK_DIR}/code:/home/jovyan/work"
+      - "${PWD}/${SPARK_DIR}/credentials:/home/jovyan/.aws/credentials"
+      - "${PWD}/${SPARK_DIR}/config:/home/jovyan/.aws/config"
     ports:
       - "9999:8888"
+      - "4040:4040"
