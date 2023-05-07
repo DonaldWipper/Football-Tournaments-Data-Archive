@@ -8,7 +8,7 @@ class Sportsapi():
         pass
 
     @staticmethod
-    def all_tournaments(category_id=None, key_name=None):
+    def get_all_tournaments(category_id=None, key_name=None):
         if category_id is not None:
             prefix = '?category_id=%d' % category_id
         else:

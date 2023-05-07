@@ -9,7 +9,7 @@ db = client["sports_ru_staging"]
 collection = db["tournament_calendar"]
 
 # грузим только те сезоны, где есть несыгранные матчи
-tournaments = Sportsapi.all_tournaments()
+tournaments = Sportsapi.get_all_tournaments()
 
 seasons = []
 for tournament_id in list(tournaments['id']):

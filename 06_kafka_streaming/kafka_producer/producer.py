@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 
 # грузим только те сезоны, где есть несыгранные матчи
-tournaments = Sportsapi.all_tournaments()
+tournaments = Sportsapi.get_all_tournaments()
 
 seasons = []
 for tournament_id in list(tournaments['id']):
