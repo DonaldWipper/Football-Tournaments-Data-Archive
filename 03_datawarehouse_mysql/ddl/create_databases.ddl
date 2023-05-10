@@ -1,9 +1,0 @@
-CREATE DATABASE fifa_staging;
-CREATE DATABASE uefa_staging;
-CREATE DATABASE sports_ru_staging;
-CREATE DATABASE euro_stat;
-CREATE DATABASE sources_links;
-CREATE DATABASE fastapi;
-CREATE DATABASE euro_stat_clubs;
-CREATE DATABASE clubelo_staging;
-CREATE DATABASE elorating_staging;

@@ -46,3 +46,13 @@ class Sportsapi():
     def get_info_by_tag(tag_id):
         resp = requests.get(url.url_tags + '?&tag=%d' % tag_id)
         return resp.json()
+
+    @staticmethod
+    def get_match_stat_by_id(match_id: int) -> list[dict]:
+        resp = requests.get(url.url_match_stat % match_id)
+        return resp.json()
+
+    @staticmethod
+    def get_matches_by_tournament_and_day(tournament_id: int, date: int) -> list[dict]:
+        resp = requests.get(url.url_matches % (tournament_id, date))
+        return resp.json()

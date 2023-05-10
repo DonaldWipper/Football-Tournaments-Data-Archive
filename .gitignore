@@ -3,3 +3,6 @@
 !/02_orchestration_prefect/volumes/
 !/04_spark/credentials
 !/04_spark/config
+!/02_orchestration_prefect/flows/sports.ru/sports.ru/football/
+!/02_orchestration_prefect/volumes/
+/volumes/
