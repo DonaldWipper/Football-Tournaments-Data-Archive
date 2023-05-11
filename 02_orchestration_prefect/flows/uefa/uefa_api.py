@@ -44,16 +44,15 @@ class UefaApi():
         pass
 
     @staticmethod
-    def get_matches(seasonYear:int):
-        resp = requests.get(url.url_matches.format(seasonYear=seasonYear))
+    def get_matches(competition_id: int, season_year: int):
+        resp = requests.get(url.url_matches.format(competition_id=competition_id, season_year=season_year))
         df = pd.DataFrame(data=resp.json())
         return df
 
     @staticmethod
-    def get_competitions(seasonYear:int):
-        resp = requests.get(url.url_matches.format(seasonYear=seasonYear))
+    def get_competitions():
+        resp = requests.get(url.url_competitions)
         df = pd.DataFrame(data=resp.json())
         return df
-
 
 
