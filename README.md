@@ -141,6 +141,7 @@ For the game statistics it is partitioned by Tournament, Year, Stage Name and Da
 
 Raw data is loaded into the corresponding staging tables in the databases fifa_staging, uefa_staging, sports_ru_staging, elorating_staging, clubelo_staging. 
 The tables may contain duplicates.
+<img src="images/prefect.png" alt="Prefect" width="500">
 
 ### (3)  Data Warehouse Transformation with dbt
 

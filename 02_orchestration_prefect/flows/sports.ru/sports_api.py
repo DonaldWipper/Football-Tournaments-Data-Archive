@@ -34,12 +34,13 @@ class Sportsapi():
 
     @staticmethod
     def get_tour_calendar(tournament_id, season_id):
-        resp = requests.get(url.url_tournament_calendar + '?&tournament=%d' % tournament_id + '&season=%d' % season_id)
+        print(url.url_tournament_calendar + '?&tournament=%d' % tournament_id + '&season_id=%d' % season_id)
+        resp = requests.get(url.url_tournament_calendar + '?&tournament=%d' % tournament_id + '&season_id=%d' % season_id)
         return resp.json()
 
     @staticmethod
     def get_playoff_stat(tournament_id, season_id):
-        resp = requests.get(url.url_playoff_stat + '?&tournament=%d' % tournament_id + '&season=%d' % season_id)
+        resp = requests.get(url.url_playoff_stat + '?&tournament=%d' % tournament_id + '&season_id=%d' % season_id)
         return resp.json()
 
     @staticmethod

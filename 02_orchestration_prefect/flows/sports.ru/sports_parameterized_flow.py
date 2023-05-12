@@ -4,7 +4,6 @@ from pathlib import Path
 from prefect import task, flow
 from enum import Enum
 
-
 from sports_api import Sportsapi
 from utils import (
     transform,
@@ -136,11 +135,13 @@ def etl_web_to_ya_s3(
             last_seasons = get_all_seasons(tournament_id)
 
         for season in last_seasons:
+            print(season["tournament_id"], season["id"], season["name"])
             calendar_ = Sportsapi.get_tour_calendar(
                 tournament_id=season["tournament_id"], season_id=season["id"]
             )
 
             for item in calendar_:
+
                 stage_name = (
                     item["stage_name"] if item["stage_name"] != "" else "no_stage_name"
                 )
@@ -150,6 +151,8 @@ def etl_web_to_ya_s3(
                     list(set([unix_timestamp_to_date(v["time"]) for v in matches])),
                     reverse=True,
                 )
+                print(dates, 'before')
+                # continue
 
                 if date_int:
                     dates = [
@@ -160,16 +163,18 @@ def etl_web_to_ya_s3(
                         )
                            == str(date_int)
                     ]
+                print(dates, 'after')
                 for date in dates:
+                    print(date)
                     dt = datetime.datetime.strptime(date, "%Y-%m-%d")
-                    date_int = dt.strftime("%Y%m%d")
+                    date_int_ = dt.strftime("%Y%m%d")
                     year = dt.year
                     matches_ = [
                         m for m in matches if unix_timestamp_to_date(m["time"]) == date
                     ]
                     matches_ids = [m['id'] for m in matches_]
                     matches_stat = Sportsapi.get_matches_by_tournament_and_day(
-                        tournament_id=season["tournament_id"], date=int(date_int)
+                        tournament_id=season["tournament_id"], date=int(date_int_)
                     )
                     print(date, len(matches_))
 
@@ -189,7 +194,7 @@ def etl_web_to_ya_s3(
                         season["tournament_id"],
                         year,
                         stage_name,
-                        date_int,
+                        date_int_,
                     )
                     load_to_s3(path)
 
@@ -199,7 +204,7 @@ def etl_web_to_ya_s3(
                         tournament_id=season["tournament_id"],
                         year=year,
                         stage_name=stage_name,
-                        date=date_int,
+                        date=date_int_,
                     )
                     load_to_s3(path)
 
@@ -213,7 +218,7 @@ def etl_web_to_ya_s3(
                             tournament_id=season["tournament_id"],
                             year=year,
                             stage_name=stage_name,
-                            date=date_int,
+                            date=date_int_,
                             match_id=match_id
                         )
                         load_to_s3(path)
@@ -326,7 +331,7 @@ if __name__ == "__main__":
     # paths = extract_from_ya_s3(entity_type='tournament_calendar', tournament_id=52)
     # df = pd.concat((pd.read_parquet(f, engine='pyarrow').assign(path=str(f)) for f in paths))
     # print(json.dumps(dict(df['command2'][0:1])))
-    etl_web_to_ya_s3(entity_type="tournament_calendar", tournament_id=52, date_int=20230528)
+    etl_web_to_ya_s3(entity_type="tournament_calendar", tournament_id=52)
     # entities = ["tournaments", "tournament_stat_seasons"]
     # for entity in entities:
     #     etl_web_to_ya_s3(entity)

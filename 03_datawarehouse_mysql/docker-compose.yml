@@ -1,14 +1,31 @@
 version: '3.8'
 services:
   db:
-    image: mysql:8.0.27
+    image: mysql:latest
     restart: always
-    env_file:
-      - .env
     environment:
-      - MYSQL_DATABASE=uero_stat
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - MYSQL_USER=${DB_USERNAME}
+    volumes:
+      - /root/mysql/db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backup.sql:/backup.sql
+    command: '--max-allowed-packet=128M --net_read_timeout=7200 --innodb-log-file-size=1048576000 --innodb-log-buffer-size=8388608'
     ports:
-      - '3306:3306'
+      - '3307:3306'
+
+  backup:
+    image: alpine
+    volumes:
+      - ./backup.sh:/backup.sh
+      - ./backups:/backups
+    command: /bin/sh -c "while true; do /backup.sh; sleep 300; done"
+    depends_on:
+      - db
+volumes:
+  db_data:
+
+
+
+
