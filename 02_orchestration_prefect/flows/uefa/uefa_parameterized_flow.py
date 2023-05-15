@@ -397,8 +397,8 @@ if __name__ == "__main__":
     # print(json.dumps(dict(df['command2'][0:1])))
     # etl_s3_to_mysql(entity_type="competitions")
     # etl_web_to_ya_s3(entity_type="competitions")
-    etl_web_to_ya_s3(entity_type="matches", competition_id=3, year=2020)
-    # etl_s3_to_mysql(entity_type="matches", tournament_id=3, year=2020, )
+    # etl_web_to_ya_s3(entity_type="matches", competition_id=3, year=2020)
+    etl_s3_to_mysql(entity_type="matches", tournament_id=3, year=2020, )
     # entities = ["tournaments", "tournament_stat_seasons"]
     # for entity in entities:
     #     etl_web_to_ya_s3(entity)
