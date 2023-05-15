@@ -13,3 +13,7 @@ docker:
 .PHONY: register-test-flow
 register-test-flow:
 	docker-compose exec prefect-server /bin/bash -c 'cd /opt/prefect/flows/test_flow && python deployment.py'
+
+.PHONY: init-spark-paths
+init-spark-paths:
+	docker-compose exec prefect-server /bin/bash -c 'export PYTHONPATH="${SPARK_HOME}/python/lib/py4j-0.10.9-src.zip:${PYTHONPATH}" && export PYTHONPATH="${SPARK_HOME}/python:${PYTHONPATH}"'

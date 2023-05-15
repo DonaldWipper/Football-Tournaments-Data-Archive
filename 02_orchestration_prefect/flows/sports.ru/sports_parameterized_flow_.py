@@ -1,10 +1,11 @@
 import pandas as pd
 import datetime
+import asyncio
 from pathlib import Path
 from prefect import task, flow
 from enum import Enum
 
-from uefa_api import UefaApi
+from sports_api import Sportsapi
 from utils import (
     transform,
     unix_timestamp_to_date,
@@ -17,11 +18,9 @@ from prefect_aws import S3Bucket, AwsCredentials
 
 aws_credentials_block = AwsCredentials.load("yandex-object-storage")
 
-SOURCE = "uefa"
-SCHEMA = "uefa_staging"
-S3_PATH_DEEP = "uefa/football/tournament_id={tournament_id}/year={year}/stage_name={stage_name}/date={date}"
-S3_PATH_DEEP_MATCH = "uefa/football/tournament_id={tournament_id}/year={year}/stage_name={stage_name}/date={date}/match_id={match_id}"
-S3_PATH_COMMON = "uefa/football"
+S3_PATH_DEEP = "sports.ru/football/tournament_id={tournament_id}/year={year}/stage_name={stage_name}/date={date}"
+S3_PATH_DEEP_MATCH = "sports.ru/football/tournament_id={tournament_id}/year={year}/stage_name={stage_name}/date={date}/match_id={match_id}"
+S3_PATH_COMMON = "sports.ru/football"
 
 
 @task(retries=1)
@@ -75,113 +74,116 @@ def write_local_deep_match(
     return path
 
 
+@task(retries=1)
+def get_all_seasons(tournament_id: int = None, year: int = None) -> list:
+    tournaments = Sportsapi.get_all_tournaments()
+
+    if tournament_id:
+        relevant_tournaments = [tournament_id]
+    else:
+        relevant_tournaments = [t for t in tournaments["id"]]
+
+    # Find the most recent season for each relevant tournament
+    seasons = []
+    tasks = []
+
+    for t in relevant_tournaments:
+        seasons_df = Sportsapi.get_stat_seasons_by_id(t)
+        if "name" in seasons_df.columns:
+            if year:
+                seasons_df = seasons_df[seasons_df['name'].str.contains(str(year))]
+            seasons_df["tournament_id"] = t
+            seasons_ = seasons_df.sort_values(["name"], ascending=[0]).to_dict(
+                "records"
+            )
+
+
+            print(seasons_)
+            seasons += seasons_
+
+    seasons = []
+    for season_tasks in asyncio.as_completed(tasks):
+        season_matches = await season_tasks
+        seasons.append(season_matches)
+
+    return seasons
+
+
 def write_mysql(df: pd.DataFrame, entity_type: str) -> None:
     print(df)
     df.to_sql(
-        schema=SCHEMA,
-        name=entity_type,
-        con=DBConnection.get_engine(),
-        if_exists="append",
-        index=False
+        name=entity_type, con=DBConnection.get_engine(), if_exists="append", index=False
     )
 
 
-def create_list_to_upload(matches: list):
-    import collections
+def retrieve_seasons() -> list:
+    data = DBConnection.get_dict_from_table(
+        "tournament_stat_seasons_s3", condition={"is_on_s3": 0}
+    )
+    return data
 
-    # Получаем все уникальные значения stage_name и date
-    unique_stage_names = set()
-    unique_dates = set()
 
-    def get_stage_name(match_):
-        if "group" in match_:
-            return match_["group"]["metaData"]["groupName"]
-        else:
-            return match_['round']['metaData']['name']
+async def save_matches_s3(df: pd.DataFrame,
+                          stage_name: str,
+                          entity_type: str,
+                          date: datetime.datetime,
+                          date_int: int,
+                          tournament_id: int,
+                          year: int) -> Path:
+    df["year"] = year
+    df["stage_name"] = stage_name
+    df["date"] = date
 
-    for match in matches:
-        print(match.keys())
-        stage_name = get_stage_name(match)
-        date_str = match['kickOffTime']['date']
-        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
-        date_formatted = date_obj.strftime('%Y%m%d')
-        unique_stage_names.add(stage_name)
-        unique_dates.add(date_formatted)
+    path = write_local_deep(
+        df=df,
+        entity_type=entity_type,
+        tournament_id=tournament_id,
+        year=year,
+        stage_name=stage_name,
+        date=date_int,
+    )
+    load_to_s3(path)
+    return path
 
-    # Создаем словарь, который будет использоваться для сохранения отфильтрованных данных
-    filtered_data = collections.defaultdict(list)
 
-    print(unique_stage_names)
-    print(unique_dates)
-
-    # Проходим по всем уникальным значениям stage_name и date
-    for stage_name in unique_stage_names:
-        for date in unique_dates:
-            # Фильтруем данные по stage_name и date
-            filtered_matches = [match for match in matches if
-                                get_stage_name(match) == stage_name and datetime.datetime.strptime(
-                                    match['kickOffTime'][
-                                        'date'], '%Y-%m-%d').strftime('%Y%m%d') == date]
-
-            # Сохраняем отфильтрованные данные в словаре
-            if len(filtered_matches) > 0:
-                filtered_data[(stage_name, date)] = filtered_matches
-
-    # Сортируем комбинации по убыванию стадий и дат внутри стадий
-    sorted_combinations = sorted(filtered_data.keys(), key=lambda x: (x[0], x[1]))
-
-    # Возвращаем словарь с сортированными ключами и отфильтрованными данными
-    result_dict = collections.OrderedDict()
-    for combination in sorted_combinations:
-        result_dict[combination] = filtered_data[combination]
-
-    return result_dict
+async def save_match_by_id(df: pd.DataFrame,
+                           stage_name: str,
+                           match_id: int,
+                           entity_type: str,
+                           date_int: int,
+                           tournament_id: int,
+                           year: int) -> Path:
+    df_match_stat = pd.DataFrame(data=Sportsapi.get_match_stat_by_id(match_id))
+    df_match_stat['command1'] = df_match_stat['command1'].astype(str)
+    df_match_stat['command2'] = df_match_stat['command2'].astype(str)
+    path = write_local_deep_match(
+        df=df,
+        entity_type=entity_type,
+        tournament_id=tournament_id,
+        year=year,
+        stage_name=stage_name,
+        date=date_int,
+        match_id=match_id
+    )
+    load_to_s3(path)
+    return path
 
 
 @flow()
 def etl_web_to_ya_s3(
-        entity_type: str,
-        competition_id: int = None,
-        year: int = None
+        entity_type: str, tournament_id: int = None, date_int: int = None
 ) -> None:
     """Load data from api to object storage"""
-    if entity_type == "competitions":
-        df = UefaApi.get_competitions()
-    elif entity_type == "matches":
-        res = UefaApi.get_matches(competition_id, year)
-    if entity_type in ["competitions"]:
+    if entity_type == "tournaments":
+        df = Sportsapi.get_all_tournaments()
+    elif entity_type == "tournament_stat_seasons":
+        df = pd.DataFrame(data=get_all_seasons())
+
+    if entity_type in ["tournaments", "tournament_stat_seasons"]:
         path = write_local_common(df, entity_type)
         load_to_s3(path)
 
-    import concurrent.futures
-
-    def write_local_parallel(entity_type: str, competition_id: int, year: int, data: list) -> None:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = []
-            for res, value in data:
-                path = write_local_deep(
-                    df=pd.DataFrame(data=pd.DataFrame(data=value)),
-                    entity_type=entity_type,
-                    tournament_id=competition_id,
-                    year=year,
-                    stage_name=str(res[0]),
-                    date=str(res[1]))
-                futures.append(executor.submit(load_to_s3, path))
-            concurrent.futures.wait(futures)
-
-    if entity_type == "matches":
-        filter_list = create_list_to_upload(res)
-        write_local_parallel(entity_type, competition_id, year, filter_list.items())
-    #     # for res, value in filter_list.items():
-    #     #     path = write_local_deep(
-    #     #         df=pd.DataFrame(data=pd.DataFrame(data=value)),
-    #     #         entity_type=entity_type,
-    #     #         tournament_id=competition_id,
-    #     #         year=year,
-    #     #         stage_name=str(res[0]),
-    #     #         date=str(res[1]))
-    #     #
-    #     #     load_to_s3(path)
+    # if entity_type == "tournament_calendar":
     #     if date_int:
     #         year = datetime.datetime.strptime(str(date_int), "%Y%m%d").year
     #         last_seasons = get_all_seasons(tournament_id, year)
@@ -189,20 +191,27 @@ def etl_web_to_ya_s3(
     #         last_seasons = get_all_seasons(tournament_id)
     #
     #     for season in last_seasons:
+    #         print(season["tournament_id"], season["id"], season["name"])
+    #
     #         calendar_ = Sportsapi.get_tour_calendar(
     #             tournament_id=season["tournament_id"], season_id=season["id"]
     #         )
     #
     #         for item in calendar_:
+    #
     #             stage_name = (
     #                 item["stage_name"] if item["stage_name"] != "" else "no_stage_name"
     #             )
+    #
     #             matches = item["matches"]
     #
     #             dates = sorted(
     #                 list(set([unix_timestamp_to_date(v["time"]) for v in matches])),
     #                 reverse=True,
     #             )
+    #
+    #             print(dates, 'before')
+    #             # continue
     #
     #             if date_int:
     #                 dates = [
@@ -213,16 +222,19 @@ def etl_web_to_ya_s3(
     #                     )
     #                        == str(date_int)
     #                 ]
+    #             print(dates, 'after')
     #             for date in dates:
+    #                 print(date)
     #                 dt = datetime.datetime.strptime(date, "%Y-%m-%d")
-    #                 date_int = dt.strftime("%Y%m%d")
+    #                 date_int_ = dt.strftime("%Y%m%d")
     #                 year = dt.year
     #                 matches_ = [
     #                     m for m in matches if unix_timestamp_to_date(m["time"]) == date
     #                 ]
     #                 matches_ids = [m['id'] for m in matches_]
+    #
     #                 matches_stat = Sportsapi.get_matches_by_tournament_and_day(
-    #                     tournament_id=season["tournament_id"], date=int(date_int)
+    #                     tournament_id=season["tournament_id"], date=int(date_int_)
     #                 )
     #                 print(date, len(matches_))
     #
@@ -242,7 +254,7 @@ def etl_web_to_ya_s3(
     #                     season["tournament_id"],
     #                     year,
     #                     stage_name,
-    #                     date_int,
+    #                     date_int_,
     #                 )
     #                 load_to_s3(path)
     #
@@ -252,7 +264,7 @@ def etl_web_to_ya_s3(
     #                     tournament_id=season["tournament_id"],
     #                     year=year,
     #                     stage_name=stage_name,
-    #                     date=date_int,
+    #                     date=date_int_,
     #                 )
     #                 load_to_s3(path)
     #
@@ -266,7 +278,7 @@ def etl_web_to_ya_s3(
     #                         tournament_id=season["tournament_id"],
     #                         year=year,
     #                         stage_name=stage_name,
-    #                         date=date_int,
+    #                         date=date_int_,
     #                         match_id=match_id
     #                     )
     #                     load_to_s3(path)
@@ -296,11 +308,13 @@ def extract_from_ya_s3(
     # Initialize S3 client
     s3 = aws_credentials_block.get_client("s3")
 
-    s3_prefix = f"{SOURCE}/football/"
+    s3_prefix = f"sports.ru/football/"
 
-    pattern_date = re.compile(f".*date={date}.*")
-    pattern_tournament = re.compile(f".*tournament_id=/{tournament_id}/.*")
-    pattern_year = re.compile(f".*year=/{year}/.*")
+    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=s3_prefix)
+
+    pattern_date = re.compile(f".*{date}.*")
+    pattern_tournament = re.compile(f".*/{tournament_id}/.*")
+    pattern_year = re.compile(f".*/{year}/.*")
 
     files = []
 
@@ -325,11 +339,10 @@ def extract_from_ya_s3(
                     elif not date and not year and not tournament_id:
                         files.append(obj["Key"])
             elif search_option == SearchOption.TOURNAMENT_YEAR:
-
                 if tournament_id and year:
                     if (
                             entity_type in obj["Key"]
-                            and f"tournament_id={tournament_id}/year={year}/" in obj["Key"]
+                            and f"{tournament_id}/{year}/" in obj["Key"]
                     ):
                         if date and pattern_date.match(obj["Key"]):
                             files.append(obj["Key"])
@@ -339,32 +352,22 @@ def extract_from_ya_s3(
                 if tournament_id and year and date:
                     if (
                             entity_type in obj["Key"]
-                            and f"tournament_id={tournament_id}/year={year}/date={date}" in obj["Key"]
+                            and f"{tournament_id}/{year}/{date}" in obj["Key"]
                     ):
                         files.append(obj["Key"])
 
-    # paths = []
-    # for file_path in files:
-    #     Path(file_path.replace(f"{entity_type}.parquet", "")).mkdir(
-    #         parents=True, exist_ok=True
-    #     )
-    #     path = Path(file_path.replace(f"{entity_type}.parquet", ""))
-    #     paths.append(path)
-    # s3.download_file(bucket_name, file_path, file_path)
+    paths = []
+    for file_path in files:
+        Path(file_path.replace(f"{entity_type}.parquet", "")).mkdir(
+            parents=True, exist_ok=True
+        )
+        path = Path(file_path.replace(f"{entity_type}.parquet", ""))
+        paths.append(path)
+        # s3.download_file(bucket_name, file_path, file_path)
 
-    return files
-
-
-def get_df_from_paths(entity_name: str, paths: list) -> pd.DataFrame:
-    df = pd.concat((pd.read_parquet(f, engine='pyarrow').assign(path=str(f)) for f in paths))
-    if entity_name == "matches":
-        df['path_info'] = df['path'].apply(extract_add_info_from_path)
-        df[['year', 'date', 'stage_name', 'tournament_id']] = pd.DataFrame(df['path_info'].tolist(), index=df.index)
-        df.drop(columns=['path', 'path_info'], inplace=True)
-    return df
+    return paths
 
 
-@flow()
 def etl_s3_to_mysql(
         tournament_id: int = None,
         year: int = None,
@@ -372,11 +375,9 @@ def etl_s3_to_mysql(
         date: str = None,
 ) -> None:
     """Main ETL flow to load data into Big Query"""
-    paths = extract_from_ya_s3(tournament_id, year, entity_type, date, search_option=SearchOption.TOURNAMENT_YEAR)
-    print(paths)
-    df = get_df_from_paths(entity_type, paths)
-    df = transform(df)
-    write_mysql(df, entity_type)
+    paths = extract_from_ya_s3(tournament_id, year, entity_type, date)
+    df = transform(paths)
+    write_mysql(df)
 
 
 def load_to_s3(path: Path) -> None:
@@ -386,15 +387,11 @@ def load_to_s3(path: Path) -> None:
     print(f"File uploaded to S3: {bucket_name}/{str(path)}")
 
 
-# etl_s3_to_mysql(entity_type="competitions")
 if __name__ == "__main__":
     # paths = extract_from_ya_s3(entity_type='tournament_calendar', tournament_id=52)
     # df = pd.concat((pd.read_parquet(f, engine='pyarrow').assign(path=str(f)) for f in paths))
     # print(json.dumps(dict(df['command2'][0:1])))
-    # etl_s3_to_mysql(entity_type="competitions")
-    # etl_web_to_ya_s3(entity_type="competitions")
-    # etl_web_to_ya_s3(entity_type="matches", competition_id=3, year=2020)
-    etl_s3_to_mysql(entity_type="matches", tournament_id=3, year=2020, )
+    etl_web_to_ya_s3(entity_type="tournament_calendar", tournament_id=52)
     # entities = ["tournaments", "tournament_stat_seasons"]
     # for entity in entities:
     #     etl_web_to_ya_s3(entity)

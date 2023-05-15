@@ -40,6 +40,8 @@ function start_server() {
     sleep 1
     docker-compose up -d --force-recreate --no-deps prefect-server
     sleep 1
+    make init-spark-paths
+
 }
 
 

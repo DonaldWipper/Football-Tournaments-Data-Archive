@@ -1,126 +1,144 @@
 from prefect import task, flow
 import requests
+import contextlib
 from pathlib import Path
-from sql import DBConnection
 import pandas as pd
 from io import StringIO
+from multiprocessing import cpu_count
+from pyspark import SparkConf
 from multiprocessing.pool import ThreadPool
 
-from utils import (
-    transform,
-    unix_timestamp_to_date,
-    unix_timestamp_to_year,
-    extract_add_info_from_path,
-)
+from pyspark.sql.functions import col
 
 SOURCE = "clubelo"
 S3_PATH_COMMON = f"{SOURCE}/football"
+S3_PATH_DEEP = (
+    "sports.ru/football/year={year}/country={country}/club={club}/date={date}"
+)
 SCHEMA = "clubelo_staging"
 
 from prefect_aws import S3Bucket, AwsCredentials
 
 aws_credentials_block = AwsCredentials.load("yandex-object-storage")
 
-
-@task(retries=1)
-def write_local_common(df: pd.DataFrame,
-                       club: str,
-                       country: str,
-                       date: str,
-                       entity_type: str) -> Path:
-    """Write DataFrame out locally as parquet file"""
-    Path(f"{S3_PATH_COMMON}/{country}/{club}/").mkdir(parents=True, exist_ok=True)
-
-    path = Path(f"{S3_PATH_COMMON}/{country}/{club}/{entity_type}.parquet")
-    df.to_parquet(path, compression="gzip")
-    return path
+from prefect import task
+from pyspark.sql import SparkSession
+import os
 
 
-def get_df_from_paths(entity_name: str, paths: list) -> pd.DataFrame:
-    df = pd.concat((pd.read_parquet(f, engine='pyarrow').assign(path=str(f)) for f in paths))
-    return df
+# We assume that you have added your credential with $ aws configure
+def get_aws_credentials():
+    with open(os.path.expanduser("~/.aws/credentials")) as f:
+        for line in f:
+            # print(line.strip().split(' = '))
+            try:
+                key, val = line.strip().split(' = ')
+                if key == 'aws_access_key_id':
+                    aws_access_key_id = val
+                elif key == 'aws_secret_access_key':
+                    aws_secret_access_key = val
+            except ValueError:
+                pass
+    return aws_access_key_id, aws_secret_access_key
 
 
-def load_to_s3(path: Path) -> None:
-    bucket_name = "euro-stat"
-    s3 = aws_credentials_block.get_client("s3")
-    s3.upload_file(str(path), bucket_name, str(path))
-    print(f"File uploaded to S3: {bucket_name}/{str(path)}")
+@task
+def extract_from_ya_s3(spark: SparkSession, date: str = None, entity_name: str = None):
+    # Создаем SparkSession
 
-
-@flow()
-def extract_from_ya_s3(
-        date: str = None,
-        entity_name: str = None
-) -> list[Path]:
-    import re
-
-    bucket_name = "euro-stat"
-
-    # Initialize S3 client
-    s3 = aws_credentials_block.get_client("s3")
-
-    s3_prefix = f"{SOURCE}/football/{entity_name}.parquet"
-
-    files = []
-
-    paginator = s3.get_paginator("list_objects_v2")
-    page_iterator = paginator.paginate(
-        Bucket=bucket_name, Prefix=s3_prefix, PaginationConfig={"MaxKeys": 1000}
-    )
-
-    for page in page_iterator:
-        for obj in page.get("Contents", []):
-            files.append(obj["Key"])
-
-    return files
-
-
-def write_mysql(df: pd.DataFrame, entity_type: str) -> None:
-    print(df)
-    df.to_sql(
-        schema=SCHEMA,
-        name=entity_type,
-        con=DBConnection.get_engine(),
-        if_exists="append",
-        index=False
-    )
-
-
-@flow()
-def etl_s3_to_mysql(
-        entity_type: str = None,
-        date: str = None,
-) -> None:
-    """Main ETL flow to load data into Big Query"""
-    paths = extract_from_ya_s3(entity_type, date)
-    print(paths)
-    df = get_df_from_paths(entity_type, paths)
-    df = transform(df)
-    write_mysql(df, entity_type)
-
-
-@flow()
-def etl_web_to_ya_s3(
-        date: str = None
-):
     r = requests.get(f"http://api.clubelo.com/{date}")
     data = StringIO(r.text)
-    df = pd.read_csv(data, sep=",")
-    countries = set(df['Country'])
-    print(countries)
-    for country in countries:
-        df_clubs = df[df['Country'] == country]
-        clubs = set(df_clubs['Club'])
 
-        print('here')
-        # вызываем функцию загрузки для каждого файла
-        for club in clubs:
-            df_club = df_clubs[df_clubs['Club'] == club]
-            path = write_local_common(df_club, club, country, "rating")
-            load_to_s3(path)
+    df = pd.read_csv(data, sep=",")
+    import datetime
+
+    df["year"] = datetime.datetime.strptime(date, "%Y-%m-%d").year
+    df["date"] = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
+    df["entity"] = "rating"
+    df = df.rename(columns={"Country": "country", "Club": "club"}, errors="raise")
+
+    # Загружаем данные из файла CSV в DataFrame
+    # df_spark = spark.createDataFrame(df)
+    #
+    # partitioned_df = df_spark.repartition(
+    #     col("year"), col("country"), col("club"), col("date"), col("entity")
+    # )
+    #
+    # # Сохранить каждый файл в формате parquet локально
+    # partitioned_df.write.partitionBy("year", "country", "club", "date", "entity").mode(
+    #     "overwrite"
+    # ).parquet(S3_PATH_COMMON)
+    #
+    print(S3_PATH_COMMON)
+    local_to_s3(S3_PATH_COMMON)
+
+
+def local_to_s3(local_dir: str):
+    import subprocess
+    s3_bucket = 's3://euro-stat/'
+
+    # aws s3 cp --recursive --exclude "*" --include "*.parquet" /path/to/local_dir s3://s3_bucket/s3_prefix/
+
+    command = ['aws', 's3', 'cp', '--recursive', '--exclude',  '"*" ',  '--include', '"*.parquet"', local_dir, s3_bucket + local_dir]
+
+    access_key, secret_key = get_aws_credentials()
+    subprocess.run(f"export AWS_ACCESS_KEY_ID={access_key}")
+    subprocess.run(f"export AWS_SECRET_ACCESS_KEY={secret_key}")
+    print(' '.join(command))
+    # subprocess.run(command, check=True)
+
+
+
+
+@contextlib.contextmanager
+def get_spark_session(conf: SparkConf):
+    """
+    Function that is wrapped by context manager
+    Args:
+      - conf(SparkConf): It is the configuration for the Spark session
+    """
+
+    spark = SparkSession.builder.config(conf=conf).getOrCreate()
+    sc = spark.sparkContext
+
+    access_key, secret_key = get_aws_credentials()
+
+    # remove this block if use core-site.xml and env variable
+    sc._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "https://storage.yandexcloud.net")
+    sc._jsc.hadoopConfiguration().set("fs.s3.awsAccessKeyId", access_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3n.awsAccessKeyId", access_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3.access.key", access_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3.awsSecretAccessKey", secret_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3n.awsSecretAccessKey", secret_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3a.secret.key", secret_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3n.impl", "org.apache.hadoop.fs.s3native.NativeS3FileSystem")
+    sc._jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    sc._jsc.hadoopConfiguration().set("fs.s3.impl", "org.apache.hadoop.fs.s3.S3FileSystem")
+
+    try:
+        yield spark
+    finally:
+        spark.stop()
+
+
+@flow(name="clubelo pipeline flow")
+def data_pipeline(date: str):
+    '''
+    Function wrapped to be used as the Prefect main flow
+    '''
+
+    n_cpus = cpu_count()
+    n_executors = n_cpus - 1
+    n_cores = 4
+    n_max_cores = n_executors * n_cores
+    conf = SparkConf().setAppName("clubelo")
+    conf.set("spark.executor.memory", "10g")
+    conf.set("spark.driver.memory", "10g")
+    conf.set("spark.executor.cores", str(n_cores))
+    conf.set("spark.cores.max", str(n_max_cores))
+    with get_spark_session(conf=conf) as spark_session:
+        extract_from_ya_s3(spark_session, date=date, entity_name='rating')
 
 
 if __name__ == "__main__":
-    etl_web_to_ya_s3(date="2023-05-14")
-    # etl_s3_to_mysql(entity_type="rating", date="2023-05-14")
+    data_pipeline('2023-01-01')

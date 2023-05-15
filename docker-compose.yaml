@@ -45,6 +45,8 @@ services:
       - prefect
       - orion
       - start
+
+
     ports:
       - 4200:4200
     depends_on:
@@ -53,11 +55,15 @@ services:
     volumes:
       - ${PWD}/${PREFECT_DIR}/volumes/prefect:/root/.prefect
       - ${PWD}/${PREFECT_DIR}/flows:/opt/prefect/flows
+      - ${PWD}/${SPARK_DIR}/code:/home/jovyan/work
+      - ${PWD}/${SPARK_DIR}/credentials:/home/jovyan/.aws/credentials
+      - ${PWD}/${SPARK_DIR}/config:/home/jovyan/.aws/config
 
     environment:
       PREFECT_ORION_API_HOST: 0.0.0.0
       PREFECT_ORION_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:test-password@postgres:5432/prefect_server
       PREFECT_ORION_ANALYTICS_ENABLED: "false"
+      JUPYTER_ENABLE_LAB: "yes"
       PREFECT_LOGGING_SERVER_LEVEL: WARNING
       PREFECT_API_URL: http://prefect-server:4200/api
     networks:
@@ -79,14 +85,15 @@ services:
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
       PREFECT_LOGGING_LEVEL: DEBUG
+      JUPYTER_ENABLE_LAB: "yes"
       DOCKER_HOST: unix://var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - prefect
 
-  pyspark:
-    image: pyspark-aws:10
+  spark:
+    image: ${PREFECT_AGENT_IMAGE}
     environment:
       JUPYTER_ENABLE_LAB: "yes"
     volumes:
@@ -96,3 +103,5 @@ services:
     ports:
       - "9999:8888"
       - "4040:4040"
+    networks:
+      - prefect
