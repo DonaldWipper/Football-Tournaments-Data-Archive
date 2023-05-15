@@ -29,12 +29,26 @@ def str_to_float(row):
     return row
 
 
+# def extract_add_info_from_path(path: str) -> tuple:
+#     # define the regular expression pattern
+#     import re
+#
+#     match = re.match(
+#         r"sports\.ru/football/(?P<tournament_id>\d+)/(?P<year>\d+)/(?P<stage_name>[^/]+)/(?P<date>\d{4}-\d{2}-\d{2})",
+#         path)
+#     tournament_id = match.group("tournament_id")
+#     year = match.group("year")
+#     stage_name = match.group("stage_name")
+#     date = match.group("date")
+#     return year, date, stage_name, tournament_id
+
+
 def extract_add_info_from_path(path: str) -> tuple:
     # define the regular expression pattern
     import re
 
     match = re.match(
-        r"sports\.ru/football/(?P<tournament_id>\d+)/(?P<year>\d+)/(?P<stage_name>[^/]+)/(?P<date>\d{4}-\d{2}-\d{2})",
+        r"uefa/football/tournament_id=(?P<tournament_id>\d+)/year=(?P<year>\d+)/stage_name=(?P<stage_name>[^/]+)/date=(?P<date>\d{8})",
         path)
     tournament_id = match.group("tournament_id")
     year = match.group("year")

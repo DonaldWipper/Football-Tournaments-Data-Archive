@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime
+import asyncio
 from pathlib import Path
 from prefect import task, flow
 from enum import Enum
@@ -84,6 +85,8 @@ def get_all_seasons(tournament_id: int = None, year: int = None) -> list:
 
     # Find the most recent season for each relevant tournament
     seasons = []
+    tasks = []
+
     for t in relevant_tournaments:
         seasons_df = Sportsapi.get_stat_seasons_by_id(t)
         if "name" in seasons_df.columns:
@@ -94,8 +97,15 @@ def get_all_seasons(tournament_id: int = None, year: int = None) -> list:
                 "records"
             )
 
+
             print(seasons_)
             seasons += seasons_
+
+    seasons = []
+    for season_tasks in asyncio.as_completed(tasks):
+        season_matches = await season_tasks
+        seasons.append(season_matches)
+
     return seasons
 
 
@@ -113,6 +123,52 @@ def retrieve_seasons() -> list:
     return data
 
 
+async def save_matches_s3(df: pd.DataFrame,
+                          stage_name: str,
+                          entity_type: str,
+                          date: datetime.datetime,
+                          date_int: int,
+                          tournament_id: int,
+                          year: int) -> Path:
+    df["year"] = year
+    df["stage_name"] = stage_name
+    df["date"] = date
+
+    path = write_local_deep(
+        df=df,
+        entity_type=entity_type,
+        tournament_id=tournament_id,
+        year=year,
+        stage_name=stage_name,
+        date=date_int,
+    )
+    load_to_s3(path)
+    return path
+
+
+async def save_match_by_id(df: pd.DataFrame,
+                           stage_name: str,
+                           match_id: int,
+                           entity_type: str,
+                           date_int: int,
+                           tournament_id: int,
+                           year: int) -> Path:
+    df_match_stat = pd.DataFrame(data=Sportsapi.get_match_stat_by_id(match_id))
+    df_match_stat['command1'] = df_match_stat['command1'].astype(str)
+    df_match_stat['command2'] = df_match_stat['command2'].astype(str)
+    path = write_local_deep_match(
+        df=df,
+        entity_type=entity_type,
+        tournament_id=tournament_id,
+        year=year,
+        stage_name=stage_name,
+        date=date_int,
+        match_id=match_id
+    )
+    load_to_s3(path)
+    return path
+
+
 @flow()
 def etl_web_to_ya_s3(
         entity_type: str, tournament_id: int = None, date_int: int = None
@@ -127,105 +183,109 @@ def etl_web_to_ya_s3(
         path = write_local_common(df, entity_type)
         load_to_s3(path)
 
-    if entity_type == "tournament_calendar":
-        if date_int:
-            year = datetime.datetime.strptime(str(date_int), "%Y%m%d").year
-            last_seasons = get_all_seasons(tournament_id, year)
-        else:
-            last_seasons = get_all_seasons(tournament_id)
-
-        for season in last_seasons:
-            print(season["tournament_id"], season["id"], season["name"])
-            calendar_ = Sportsapi.get_tour_calendar(
-                tournament_id=season["tournament_id"], season_id=season["id"]
-            )
-
-            for item in calendar_:
-
-                stage_name = (
-                    item["stage_name"] if item["stage_name"] != "" else "no_stage_name"
-                )
-                matches = item["matches"]
-
-                dates = sorted(
-                    list(set([unix_timestamp_to_date(v["time"]) for v in matches])),
-                    reverse=True,
-                )
-                print(dates, 'before')
-                # continue
-
-                if date_int:
-                    dates = [
-                        d
-                        for d in dates
-                        if datetime.datetime.strptime(d, "%Y-%m-%d").strftime(
-                            "%Y%m%d"
-                        )
-                           == str(date_int)
-                    ]
-                print(dates, 'after')
-                for date in dates:
-                    print(date)
-                    dt = datetime.datetime.strptime(date, "%Y-%m-%d")
-                    date_int_ = dt.strftime("%Y%m%d")
-                    year = dt.year
-                    matches_ = [
-                        m for m in matches if unix_timestamp_to_date(m["time"]) == date
-                    ]
-                    matches_ids = [m['id'] for m in matches_]
-                    matches_stat = Sportsapi.get_matches_by_tournament_and_day(
-                        tournament_id=season["tournament_id"], date=int(date_int_)
-                    )
-                    print(date, len(matches_))
-
-                    df = pd.DataFrame(data=matches_)
-                    df_matches_stat = pd.DataFrame(data=matches_stat)
-
-                    df_matches_stat["tournament_id"] = df["tournament_id"] = season[
-                        "tournament_id"
-                    ]
-                    df_matches_stat["year"] = df["year"] = year
-                    df_matches_stat["stage_name"] = df["stage_name"] = stage_name
-                    df_matches_stat["date"] = df["date"] = date
-
-                    path = write_local_deep(
-                        df,
-                        entity_type,
-                        season["tournament_id"],
-                        year,
-                        stage_name,
-                        date_int_,
-                    )
-                    load_to_s3(path)
-
-                    path = write_local_deep(
-                        df=df_matches_stat,
-                        entity_type="matches",
-                        tournament_id=season["tournament_id"],
-                        year=year,
-                        stage_name=stage_name,
-                        date=date_int_,
-                    )
-                    load_to_s3(path)
-
-                    for match_id in matches_ids:
-                        df_match_stat = pd.DataFrame(data=Sportsapi.get_match_stat_by_id(match_id))
-                        df_match_stat['command1'] = df_match_stat['command1'].astype(str)
-                        df_match_stat['command2'] = df_match_stat['command2'].astype(str)
-                        path = write_local_deep_match(
-                            df=df_match_stat,
-                            entity_type="match_stat",
-                            tournament_id=season["tournament_id"],
-                            year=year,
-                            stage_name=stage_name,
-                            date=date_int_,
-                            match_id=match_id
-                        )
-                        load_to_s3(path)
-
-                    # DBConnection.execute(f"""update sports_ru_staging.tournament_stat_seasons_s3
-                    #                          set is_on_s3 = 1
-                    #                          where id = {season['id']}""")
+    # if entity_type == "tournament_calendar":
+    #     if date_int:
+    #         year = datetime.datetime.strptime(str(date_int), "%Y%m%d").year
+    #         last_seasons = get_all_seasons(tournament_id, year)
+    #     else:
+    #         last_seasons = get_all_seasons(tournament_id)
+    #
+    #     for season in last_seasons:
+    #         print(season["tournament_id"], season["id"], season["name"])
+    #
+    #         calendar_ = Sportsapi.get_tour_calendar(
+    #             tournament_id=season["tournament_id"], season_id=season["id"]
+    #         )
+    #
+    #         for item in calendar_:
+    #
+    #             stage_name = (
+    #                 item["stage_name"] if item["stage_name"] != "" else "no_stage_name"
+    #             )
+    #
+    #             matches = item["matches"]
+    #
+    #             dates = sorted(
+    #                 list(set([unix_timestamp_to_date(v["time"]) for v in matches])),
+    #                 reverse=True,
+    #             )
+    #
+    #             print(dates, 'before')
+    #             # continue
+    #
+    #             if date_int:
+    #                 dates = [
+    #                     d
+    #                     for d in dates
+    #                     if datetime.datetime.strptime(d, "%Y-%m-%d").strftime(
+    #                         "%Y%m%d"
+    #                     )
+    #                        == str(date_int)
+    #                 ]
+    #             print(dates, 'after')
+    #             for date in dates:
+    #                 print(date)
+    #                 dt = datetime.datetime.strptime(date, "%Y-%m-%d")
+    #                 date_int_ = dt.strftime("%Y%m%d")
+    #                 year = dt.year
+    #                 matches_ = [
+    #                     m for m in matches if unix_timestamp_to_date(m["time"]) == date
+    #                 ]
+    #                 matches_ids = [m['id'] for m in matches_]
+    #
+    #                 matches_stat = Sportsapi.get_matches_by_tournament_and_day(
+    #                     tournament_id=season["tournament_id"], date=int(date_int_)
+    #                 )
+    #                 print(date, len(matches_))
+    #
+    #                 df = pd.DataFrame(data=matches_)
+    #                 df_matches_stat = pd.DataFrame(data=matches_stat)
+    #
+    #                 df_matches_stat["tournament_id"] = df["tournament_id"] = season[
+    #                     "tournament_id"
+    #                 ]
+    #                 df_matches_stat["year"] = df["year"] = year
+    #                 df_matches_stat["stage_name"] = df["stage_name"] = stage_name
+    #                 df_matches_stat["date"] = df["date"] = date
+    #
+    #                 path = write_local_deep(
+    #                     df,
+    #                     entity_type,
+    #                     season["tournament_id"],
+    #                     year,
+    #                     stage_name,
+    #                     date_int_,
+    #                 )
+    #                 load_to_s3(path)
+    #
+    #                 path = write_local_deep(
+    #                     df=df_matches_stat,
+    #                     entity_type="matches",
+    #                     tournament_id=season["tournament_id"],
+    #                     year=year,
+    #                     stage_name=stage_name,
+    #                     date=date_int_,
+    #                 )
+    #                 load_to_s3(path)
+    #
+    #                 for match_id in matches_ids:
+    #                     df_match_stat = pd.DataFrame(data=Sportsapi.get_match_stat_by_id(match_id))
+    #                     df_match_stat['command1'] = df_match_stat['command1'].astype(str)
+    #                     df_match_stat['command2'] = df_match_stat['command2'].astype(str)
+    #                     path = write_local_deep_match(
+    #                         df=df_match_stat,
+    #                         entity_type="match_stat",
+    #                         tournament_id=season["tournament_id"],
+    #                         year=year,
+    #                         stage_name=stage_name,
+    #                         date=date_int_,
+    #                         match_id=match_id
+    #                     )
+    #                     load_to_s3(path)
+    #
+    #                 # DBConnection.execute(f"""update sports_ru_staging.tournament_stat_seasons_s3
+    #                 #                          set is_on_s3 = 1
+    #                 #                          where id = {season['id']}""")
 
 
 class SearchOption(Enum):
