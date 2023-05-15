@@ -79,15 +79,14 @@ def local_to_s3(local_dir: str):
 
     # aws s3 cp --recursive --exclude "*" --include "*.parquet" /path/to/local_dir s3://s3_bucket/s3_prefix/
 
-    command = ['aws', 's3', 'cp', '--recursive', '--exclude',  '"*" ',  '--include', '"*.parquet"', local_dir, s3_bucket + local_dir]
+    command = ['aws', 's3', 'cp', '--recursive', '--exclude', '"*" ', '--include', '"*.parquet"', local_dir,
+               s3_bucket + local_dir, "--endpoint-url", "https://storage.yandexcloud.net"]
 
     access_key, secret_key = get_aws_credentials()
     subprocess.run(f"export AWS_ACCESS_KEY_ID={access_key}")
     subprocess.run(f"export AWS_SECRET_ACCESS_KEY={secret_key}")
     print(' '.join(command))
     # subprocess.run(command, check=True)
-
-
 
 
 @contextlib.contextmanager
