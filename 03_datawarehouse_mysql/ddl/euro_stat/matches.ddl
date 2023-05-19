@@ -10,8 +10,8 @@ create table euro_stat.matches
     home_team_id                bigint null,
     away_team_id                bigint null,
     goals_home_team             int    null, # голы в основное время
-    goals_away_team             int    null, # итоговый счет без пенальти
-    total_home_goals            int    null,
+    goals_away_team             int    null,
+    total_home_goals            int    null, # итоговый счет без пенальти
     total_away_goals            int    null,
     penalty_shootout_home_goals int    null, # cерия пенальти забитые голы
     penalty_shootout_away_goals int    null,
