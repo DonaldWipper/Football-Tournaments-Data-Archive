@@ -1,77 +1,28 @@
 import pandas as pd
-import datetime
-import asyncio
-from pathlib import Path
 from prefect import task, flow
-from enum import Enum
-
+from pyspark import SparkConf
+from multiprocessing import cpu_count
 from sports_api import Sportsapi
-from utils import (
-    transform,
-    unix_timestamp_to_date,
-    unix_timestamp_to_year,
-    extract_add_info_from_path,
-)
-from sql import DBConnection
-
+from pyspark.sql import SparkSession
 from prefect_aws import S3Bucket, AwsCredentials
+
+from prefect import task, flow
+import requests
+import contextlib
+from pathlib import Path
+import pandas as pd
+from io import StringIO
+from multiprocessing import cpu_count
+from pyspark import SparkConf
+from multiprocessing.pool import ThreadPool
+
+from pyspark.sql.functions import col
 
 aws_credentials_block = AwsCredentials.load("yandex-object-storage")
 
 S3_PATH_DEEP = "sports.ru/football/tournament_id={tournament_id}/year={year}/stage_name={stage_name}/date={date}"
 S3_PATH_DEEP_MATCH = "sports.ru/football/tournament_id={tournament_id}/year={year}/stage_name={stage_name}/date={date}/match_id={match_id}"
 S3_PATH_COMMON = "sports.ru/football"
-
-
-@task(retries=1)
-def write_local_common(df: pd.DataFrame, entity_type: str) -> Path:
-    """Write DataFrame out locally as parquet file"""
-    Path(S3_PATH_COMMON).mkdir(parents=True, exist_ok=True)
-
-    path = Path(f"{S3_PATH_COMMON}/{entity_type}.parquet")
-    df.to_parquet(path, compression="gzip")
-    return path
-
-
-@task(retries=1)
-def write_local_deep(
-        df: pd.DataFrame,
-        entity_type: str,
-        tournament_id: int,
-        year: int,
-        stage_name: str,
-        date: str,
-) -> Path:
-    """Write DataFrame out locally as parquet file"""
-    path = S3_PATH_DEEP.format(
-        tournament_id=tournament_id, year=year, stage_name=stage_name, date=date
-    )
-    Path(path).mkdir(parents=True, exist_ok=True)
-
-    path = Path(f"{path}/{entity_type}.parquet")
-    df.to_parquet(path, compression="gzip")
-    return path
-
-
-@task(retries=1)
-def write_local_deep_match(
-        df: pd.DataFrame,
-        entity_type: str,
-        tournament_id: int,
-        year: int,
-        stage_name: str,
-        date: str,
-        match_id: int
-) -> Path:
-    """Write DataFrame out locally as parquet file"""
-    path = S3_PATH_DEEP_MATCH.format(
-        tournament_id=tournament_id, year=year, stage_name=stage_name, date=date, match_id=match_id
-    )
-    Path(path).mkdir(parents=True, exist_ok=True)
-
-    path = Path(f"{path}/{entity_type}.parquet")
-    df.to_parquet(path, compression="gzip")
-    return path
 
 
 @task(retries=1)
@@ -97,81 +48,62 @@ def get_all_seasons(tournament_id: int = None, year: int = None) -> list:
                 "records"
             )
 
-
             print(seasons_)
             seasons += seasons_
-
-    seasons = []
-    for season_tasks in asyncio.as_completed(tasks):
-        season_matches = await season_tasks
-        seasons.append(season_matches)
 
     return seasons
 
 
-def write_mysql(df: pd.DataFrame, entity_type: str) -> None:
-    print(df)
-    df.to_sql(
-        name=entity_type, con=DBConnection.get_engine(), if_exists="append", index=False
+def local_to_s3(local_dir: str):
+    import subprocess
+    s3_bucket = 's3://euro-stat/'
+
+    # aws s3 cp --recursive --exclude "*" --include "*.parquet" /path/to/local_dir s3://s3_bucket/s3_prefix/
+    subprocess.run('source /home/jovyan/work/_credentials', shell=True)
+    command = ['aws', 's3', 'cp', '--recursive', '--exclude', ' "*" ', '--include', ' "*.parquet" ', local_dir,
+               s3_bucket + local_dir, "--endpoint-url", "https://storage.yandexcloud.net"]
+    print(" ".join(command))
+    # subprocess.run(command, check=True)
+
+
+
+
+@task
+def extract_from_ya_s3(spark: SparkSession, entity_name: str = None):
+    # Создаем SparkSession
+
+    r = requests.get(f"http://api.clubelo.com/{date}")
+    data = StringIO(r.text)
+
+    df = pd.read_csv(data, sep=",")
+    import datetime
+
+    df["year"] = datetime.datetime.strptime(date, "%Y-%m-%d").year
+    df["date"] = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
+    df["entity"] = "rating"
+    df = df.rename(columns={"Country": "country", "Club": "club"}, errors="raise")
+
+    # Загружаем данные из файла CSV в DataFrame
+    df_spark = spark.createDataFrame(df)
+
+    partitioned_df = df_spark.repartition(
+        col("year"), col("country"), col("club"), col("date"), col("entity")
     )
 
+    # Сохранить каждый файл в формате parquet локально
+    partitioned_df.write.partitionBy("year", "country", "club", "date", "entity").mode(
+        "overwrite"
+    ).parquet(S3_PATH_COMMON)
 
-def retrieve_seasons() -> list:
-    data = DBConnection.get_dict_from_table(
-        "tournament_stat_seasons_s3", condition={"is_on_s3": 0}
-    )
-    return data
-
-
-async def save_matches_s3(df: pd.DataFrame,
-                          stage_name: str,
-                          entity_type: str,
-                          date: datetime.datetime,
-                          date_int: int,
-                          tournament_id: int,
-                          year: int) -> Path:
-    df["year"] = year
-    df["stage_name"] = stage_name
-    df["date"] = date
-
-    path = write_local_deep(
-        df=df,
-        entity_type=entity_type,
-        tournament_id=tournament_id,
-        year=year,
-        stage_name=stage_name,
-        date=date_int,
-    )
-    load_to_s3(path)
-    return path
-
-
-async def save_match_by_id(df: pd.DataFrame,
-                           stage_name: str,
-                           match_id: int,
-                           entity_type: str,
-                           date_int: int,
-                           tournament_id: int,
-                           year: int) -> Path:
-    df_match_stat = pd.DataFrame(data=Sportsapi.get_match_stat_by_id(match_id))
-    df_match_stat['command1'] = df_match_stat['command1'].astype(str)
-    df_match_stat['command2'] = df_match_stat['command2'].astype(str)
-    path = write_local_deep_match(
-        df=df,
-        entity_type=entity_type,
-        tournament_id=tournament_id,
-        year=year,
-        stage_name=stage_name,
-        date=date_int,
-        match_id=match_id
-    )
-    load_to_s3(path)
-    return path
+    local_to_s3(S3_PATH_COMMON)
 
 
 @flow()
 def etl_web_to_ya_s3(
-        entity_type: str, tournament_id: int = None, date_int: int = None
+        entity_type: str,
+        tournament_id: int = None,
+        year: int = None,
+        date_int: int = None
 ) -> None:
     """Load data from api to object storage"""
     if entity_type == "tournaments":
@@ -183,208 +115,74 @@ def etl_web_to_ya_s3(
         path = write_local_common(df, entity_type)
         load_to_s3(path)
 
-    # if entity_type == "tournament_calendar":
-    #     if date_int:
-    #         year = datetime.datetime.strptime(str(date_int), "%Y%m%d").year
-    #         last_seasons = get_all_seasons(tournament_id, year)
-    #     else:
-    #         last_seasons = get_all_seasons(tournament_id)
-    #
-    #     for season in last_seasons:
-    #         print(season["tournament_id"], season["id"], season["name"])
-    #
-    #         calendar_ = Sportsapi.get_tour_calendar(
-    #             tournament_id=season["tournament_id"], season_id=season["id"]
-    #         )
-    #
-    #         for item in calendar_:
-    #
-    #             stage_name = (
-    #                 item["stage_name"] if item["stage_name"] != "" else "no_stage_name"
-    #             )
-    #
-    #             matches = item["matches"]
-    #
-    #             dates = sorted(
-    #                 list(set([unix_timestamp_to_date(v["time"]) for v in matches])),
-    #                 reverse=True,
-    #             )
-    #
-    #             print(dates, 'before')
-    #             # continue
-    #
-    #             if date_int:
-    #                 dates = [
-    #                     d
-    #                     for d in dates
-    #                     if datetime.datetime.strptime(d, "%Y-%m-%d").strftime(
-    #                         "%Y%m%d"
-    #                     )
-    #                        == str(date_int)
-    #                 ]
-    #             print(dates, 'after')
-    #             for date in dates:
-    #                 print(date)
-    #                 dt = datetime.datetime.strptime(date, "%Y-%m-%d")
-    #                 date_int_ = dt.strftime("%Y%m%d")
-    #                 year = dt.year
-    #                 matches_ = [
-    #                     m for m in matches if unix_timestamp_to_date(m["time"]) == date
-    #                 ]
-    #                 matches_ids = [m['id'] for m in matches_]
-    #
-    #                 matches_stat = Sportsapi.get_matches_by_tournament_and_day(
-    #                     tournament_id=season["tournament_id"], date=int(date_int_)
-    #                 )
-    #                 print(date, len(matches_))
-    #
-    #                 df = pd.DataFrame(data=matches_)
-    #                 df_matches_stat = pd.DataFrame(data=matches_stat)
-    #
-    #                 df_matches_stat["tournament_id"] = df["tournament_id"] = season[
-    #                     "tournament_id"
-    #                 ]
-    #                 df_matches_stat["year"] = df["year"] = year
-    #                 df_matches_stat["stage_name"] = df["stage_name"] = stage_name
-    #                 df_matches_stat["date"] = df["date"] = date
-    #
-    #                 path = write_local_deep(
-    #                     df,
-    #                     entity_type,
-    #                     season["tournament_id"],
-    #                     year,
-    #                     stage_name,
-    #                     date_int_,
-    #                 )
-    #                 load_to_s3(path)
-    #
-    #                 path = write_local_deep(
-    #                     df=df_matches_stat,
-    #                     entity_type="matches",
-    #                     tournament_id=season["tournament_id"],
-    #                     year=year,
-    #                     stage_name=stage_name,
-    #                     date=date_int_,
-    #                 )
-    #                 load_to_s3(path)
-    #
-    #                 for match_id in matches_ids:
-    #                     df_match_stat = pd.DataFrame(data=Sportsapi.get_match_stat_by_id(match_id))
-    #                     df_match_stat['command1'] = df_match_stat['command1'].astype(str)
-    #                     df_match_stat['command2'] = df_match_stat['command2'].astype(str)
-    #                     path = write_local_deep_match(
-    #                         df=df_match_stat,
-    #                         entity_type="match_stat",
-    #                         tournament_id=season["tournament_id"],
-    #                         year=year,
-    #                         stage_name=stage_name,
-    #                         date=date_int_,
-    #                         match_id=match_id
-    #                     )
-    #                     load_to_s3(path)
-    #
-    #                 # DBConnection.execute(f"""update sports_ru_staging.tournament_stat_seasons_s3
-    #                 #                          set is_on_s3 = 1
-    #                 #                          where id = {season['id']}""")
+    if entity_type == "tournament_calendar":
+        if date_int:
+
+# We assume that you have added your credential with $ aws configure
+def get_aws_credentials():
+    with open(os.path.expanduser("~/.aws/credentials")) as f:
+        for line in f:
+            # print(line.strip().split(' = '))
+            try:
+                key, val = line.strip().split(' = ')
+                if key == 'AWS_ACCESS_KEY_ID':
+                    aws_access_key_id = val
+                elif key == 'AWS_SECRET_ACCESS_KEY':
+                    aws_secret_access_key = val
+            except ValueError:
+                pass
+    return aws_access_key_id, aws_secret_access_key
 
 
-class SearchOption(Enum):
-    ALL = 1
-    TOURNAMENT_YEAR = 2
-    TOURNAMENT_YEAR_DATE = 3
+@contextlib.contextmanager
+def get_spark_session(conf: SparkConf):
+    """
+    Function that is wrapped by context manager
+    Args:
+      - conf(SparkConf): It is the configuration for the Spark session
+    """
+
+    spark = SparkSession.builder.config(conf=conf).getOrCreate()
+    sc = spark.sparkContext
+
+    access_key, secret_key = get_aws_credentials()
+
+    # remove this block if use core-site.xml and env variable
+    sc._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "https://storage.yandexcloud.net")
+    sc._jsc.hadoopConfiguration().set("fs.s3.awsAccessKeyId", access_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3n.awsAccessKeyId", access_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3.access.key", access_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3.awsSecretAccessKey", secret_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3n.awsSecretAccessKey", secret_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3a.secret.key", secret_key)
+    sc._jsc.hadoopConfiguration().set("fs.s3n.impl", "org.apache.hadoop.fs.s3native.NativeS3FileSystem")
+    sc._jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    sc._jsc.hadoopConfiguration().set("fs.s3.impl", "org.apache.hadoop.fs.s3.S3FileSystem")
+
+    try:
+        yield spark
+    finally:
+        spark.stop()
 
 
-def extract_from_ya_s3(
-        tournament_id: int = None,
-        year: int = None,
-        entity_type: str = None,
-        date: str = None,
-        search_option: SearchOption = SearchOption.ALL,
-) -> list[Path]:
-    import re
 
-    bucket_name = "euro-stat"
+@flow(name="sports.ru pipeline flow")
+def data_pipeline(entity_type: str, tournament_id: int = None, year:int, date_int: int = None):
+    '''
+    Function wrapped to be used as the Prefect main flow
+    '''
 
-    # Initialize S3 client
-    s3 = aws_credentials_block.get_client("s3")
-
-    s3_prefix = f"sports.ru/football/"
-
-    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=s3_prefix)
-
-    pattern_date = re.compile(f".*{date}.*")
-    pattern_tournament = re.compile(f".*/{tournament_id}/.*")
-    pattern_year = re.compile(f".*/{year}/.*")
-
-    files = []
-
-    paginator = s3.get_paginator("list_objects_v2")
-    page_iterator = paginator.paginate(
-        Bucket=bucket_name, Prefix=s3_prefix, PaginationConfig={"MaxKeys": 1000}
-    )
-
-    for page in page_iterator:
-        for obj in page.get("Contents", []):
-
-            if search_option == SearchOption.ALL:
-
-                if entity_type in obj["Key"]:
-                    if date and pattern_date.match(obj["Key"]):
-                        files.append(obj["Key"])
-                    elif year and pattern_year.match(obj["Key"]):
-                        files.append(obj["Key"])
-                    elif tournament_id and pattern_tournament.match(obj["Key"]):
-
-                        files.append(obj["Key"])
-                    elif not date and not year and not tournament_id:
-                        files.append(obj["Key"])
-            elif search_option == SearchOption.TOURNAMENT_YEAR:
-                if tournament_id and year:
-                    if (
-                            entity_type in obj["Key"]
-                            and f"{tournament_id}/{year}/" in obj["Key"]
-                    ):
-                        if date and pattern_date.match(obj["Key"]):
-                            files.append(obj["Key"])
-                        elif not date:
-                            files.append(obj["Key"])
-            elif search_option == SearchOption.TOURNAMENT_YEAR_DATE:
-                if tournament_id and year and date:
-                    if (
-                            entity_type in obj["Key"]
-                            and f"{tournament_id}/{year}/{date}" in obj["Key"]
-                    ):
-                        files.append(obj["Key"])
-
-    paths = []
-    for file_path in files:
-        Path(file_path.replace(f"{entity_type}.parquet", "")).mkdir(
-            parents=True, exist_ok=True
-        )
-        path = Path(file_path.replace(f"{entity_type}.parquet", ""))
-        paths.append(path)
-        # s3.download_file(bucket_name, file_path, file_path)
-
-    return paths
-
-
-def etl_s3_to_mysql(
-        tournament_id: int = None,
-        year: int = None,
-        entity_type: str = None,
-        date: str = None,
-) -> None:
-    """Main ETL flow to load data into Big Query"""
-    paths = extract_from_ya_s3(tournament_id, year, entity_type, date)
-    df = transform(paths)
-    write_mysql(df)
-
-
-def load_to_s3(path: Path) -> None:
-    bucket_name = "euro-stat"
-    s3 = aws_credentials_block.get_client("s3")
-    s3.upload_file(str(path), bucket_name, str(path))
-    print(f"File uploaded to S3: {bucket_name}/{str(path)}")
+    n_cpus = cpu_count()
+    n_executors = n_cpus - 1
+    n_cores = 4
+    n_max_cores = n_executors * n_cores
+    conf = SparkConf().setAppName("clubelo")
+    conf.set("spark.executor.memory", "10g")
+    conf.set("spark.driver.memory", "10g")
+    conf.set("spark.executor.cores", str(n_cores))
+    conf.set("spark.cores.max", str(n_max_cores))
+    with get_spark_session(conf=conf) as spark_session:
+        extract_from_ya_s3(spark_session, entity_type, tournament_id, date_int)
 
 
 if __name__ == "__main__":

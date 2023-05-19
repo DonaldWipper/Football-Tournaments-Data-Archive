@@ -10,4 +10,4 @@ create table euro_stat.places
     lng            double null,
     constraint id
         unique (id)
-)
+);

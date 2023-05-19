@@ -7,5 +7,11 @@
 !/02_orchestration_prefect/volumes/
 /volumes/
 /02_orchestration_prefect/flows/uefa/
-/02_orchestration_prefect/flows/clubelo/sports.ru/football/
-/02_orchestration_prefect/flows/clubelo/clubelo/football/
+/02_orchestration_prefect/flows/clubelo_/sports.ru/football/
+/02_orchestration_prefect/flows/clubelo_/clubelo/football/
+!/04_spark/credentials
+!/04_spark/code/_credentials
+/04_spark/code/eloclubs/
+/04_spark/code/sports_ru/
+!/04_spark/code/sports_url.py
+!/04_spark/code/uefa_url.py

@@ -8,5 +8,20 @@
       <jdbc-url>jdbc:mysql://116.203.90.150:3307/fastapi</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="new_reg@localhost" uuid="2774db74-3d7f-4399-8f4e-08219608645f">
+      <driver-ref>mysql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://server159.hosting.reg.ru:3306/u2053139_euro-stat</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="old_reg@localhost" uuid="418711a7-0532-410a-8827-b612f5ca2c9d">
+      <driver-ref>mysql</driver-ref>
+      <synchronize>true</synchronize>
+      <remarks>&quot;mysql+pymysql://u0891874_utyan:3J6i4K7e@server232.hosting.reg.ru:3306/u0891874_fantasy?charset=utf8mb4&quot;</remarks>
+      <jdbc-driver>com.mysql.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://server232.hosting.reg.ru:3306/u0891874_fantasy</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

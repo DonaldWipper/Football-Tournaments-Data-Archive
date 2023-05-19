@@ -101,10 +101,6 @@ def get_all_seasons(tournament_id: int = None, year: int = None) -> list:
             print(seasons_)
             seasons += seasons_
 
-    seasons = []
-    for season_tasks in asyncio.as_completed(tasks):
-        season_matches = await season_tasks
-        seasons.append(season_matches)
 
     return seasons
 
