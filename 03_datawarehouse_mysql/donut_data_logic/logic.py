@@ -22,7 +22,7 @@ query = (
     "JOIN teams t_home ON matches.home_team_id = t_home.id "
     "JOIN teams t_away ON matches.away_team_id = t_away.id "
     "JOIN places places ON matches.place_id = places.id "
-    "WHERE status_id = 3 AND c.year = 2022"
+    "WHERE status_id = 2 AND c.year = 2022"
 )
 
 cursor.execute(query)

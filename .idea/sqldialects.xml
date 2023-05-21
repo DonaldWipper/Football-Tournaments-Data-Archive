@@ -2,7 +2,12 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$USER_HOME$/backup_football/games_new_2023_03_14_09_23_41" dialect="MySQL" />
+    <file url="file://$USER_HOME$/backup_football/places_new_2023_03_14_09_23_41" dialect="MySQL" />
     <file url="file://$USER_HOME$/backup_football/stages_new_2023_03_14_09_23_41" dialect="MySQL" />
+    <file url="file://$USER_HOME$/backup_football/teams_new_2023_03_14_09_23_41" dialect="MySQL" />
+    <file url="file://$USER_HOME$/backup_football/timeline_all_uefa" dialect="MySQL" />
+    <file url="file://$USER_HOME$/backup_football/timeline_all_uefa_2023_03_14_09_23_41" dialect="MySQL" />
+    <file url="file://$USER_HOME$/backup_football/timeline_fifa" dialect="MySQL" />
     <file url="file://$USER_HOME$/backup_football/tournaments_new_2023_03_14_09_23_41" dialect="MySQL" />
   </component>
 </project>
