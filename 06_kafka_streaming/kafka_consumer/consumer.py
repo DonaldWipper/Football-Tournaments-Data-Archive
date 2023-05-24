@@ -1,32 +1,70 @@
-from sports_api import Sportsapi
+from confluent_kafka import Consumer, KafkaError
 from pymongo import MongoClient
-import datetime
 
-client = MongoClient('mongodb://root:example@localhost:27017/')
-print(client)
+# Параметры подключения к Kafka
+kafka_bootstrap_servers = 'localhost:9092'
+kafka_topic = 'sports_games'
+kafka_group_id = 'sports_consumer'
 
-db = client["sports_ru_staging"]
-collection = db["tournament_calendar"]
+# Параметры подключения к MongoDB
+mongodb_uri = "mongodb://localhost:27017/"
+database_name = "euro-stat"
+collection_name = "sport_collect"
 
-# грузим только те сезоны, где есть несыгранные матчи
-tournaments = Sportsapi.get_all_tournaments()
 
-seasons = []
-for tournament_id in list(tournaments['id']):
-    x = Sportsapi.get_stat_seasons_by_id(tournament_id)
-    if 'name' in x.columns:
-        zz = x.sort_values(['name'], ascending=[0])[0:1]
-        current_year = datetime.datetime.now().year
-        year_seasons = zz.to_dict('records')[0]['name'].split('/')
-        if str(current_year) in year_seasons:
-            seasons_ = zz.to_dict('records')
-            for s in seasons_:
-                s['tournament_id'] = tournament_id
-            seasons += seasons_
-            break
+# Функция обработки сообщений из Kafka
+def consume_messages():
+    consumer = Consumer({
+        'bootstrap.servers': kafka_bootstrap_servers,
+        'group.id': kafka_group_id,
+        'auto.offset.reset': 'earliest'
+    })
+    consumer.subscribe([kafka_topic])
 
-for s in seasons:
-    document = Sportsapi.get_tour_calendar(tournament_id=s['tournament_id'], season_id=s['id'])
-    print(document)
-    result = collection.insert_many(document)
-    print(result.ins)
+    client = MongoClient(mongodb_uri)
+    db = client[database_name]
+    collection = db[collection_name]
+
+    try:
+        while True:
+            msg = consumer.poll(1.0)
+
+            if msg is None:
+                continue
+
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    continue
+                else:
+                    print('Ошибка при чтении сообщения из Kafka: {}'.format(msg.error()))
+                    break
+
+            # Получение данных из сообщения
+            message_value = msg.value().decode('utf-8')
+
+            # Пример обработки данных перед записью в MongoDB
+            processed_data = process_data(message_value)
+
+            # Запись обработанных данных в MongoDB
+            collection.insert_one(processed_data)
+
+            print('Записано в MongoDB: {}'.format(processed_data))
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        consumer.close()
+
+
+# Пример обработки данных перед записью в MongoDB
+def process_data(data):
+    # Возможно, здесь нужно преобразовать данные или произвести другую обработку перед записью в MongoDB
+    processed_data = {
+        'value': data
+    }
+    return processed_data
+
+
+# Запуск потребителя (consumer)
+consume_messages()

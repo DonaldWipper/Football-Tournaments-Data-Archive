@@ -55,8 +55,8 @@ class UefaApi():
 
    
     @staticmethod
-    def get_stadiums():
-        resp = requests.get(uefa_url.url_stadiums)
+    def get_stadiums(offset: int):
+        resp = requests.get(uefa_url.url_stadiums.format(offset=offset))
         return resp.json()
 
 
