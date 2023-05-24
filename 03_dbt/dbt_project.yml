@@ -1,0 +1,61 @@
+name: 'euro-stat'
+version: '1.0.0'
+config-version: 2
+
+profiles:
+  my_profile:
+    target: dev
+    outputs:
+      dev:
+        type: mysql
+        host: localhost
+        port: 3306
+        user: my_user
+        password: my_password
+        dbname: my_database
+
+models:
+  euro-stat:
+    staging:
+      match_results:
+        materialized: view
+        sql: models/staging/match_results.sql
+      schedules:
+        materialized: table
+        sql: models/staging/schedules.sql
+      stadiums:
+        materialized: table
+        sql: models/staging/stadiums.sql
+      statistics:
+        materialized: table
+        sql: models/staging/match_status.sql
+
+    production:
+      game_results:
+        materialized: table
+        sql: models/production/update_game_result.sql
+      players:
+        materialized: table
+        sql: models/production/link_stadium_to_uefa.sql
+      teams:
+        materialized: table
+        sql: models/production/teams.sql
+
+    core:
+      match_status:
+        materialized: table
+        sql: models/core/match_status.sql
+      stages:
+        materialized: table
+        sql: models/core/stages.sql
+      goals:
+        materialized: table
+        sql: models/core/goals.sql
+
+seeds:
+  euro-stat:
+    my_seed:
+      seed_enabled: true
+      seed_injector: "{{ env_var('MY_SEED_INJECTOR') }}"
+      seeds:
+        - seeds/sports_rating.csv
